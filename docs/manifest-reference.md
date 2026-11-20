@@ -54,7 +54,7 @@ deployment:
 | `categories` | no | Catalog category keys. Unknown keys are rejected. |
 | `roles` | no | Catalog Role Package keys. Unknown keys are rejected. |
 | `capabilities` | no | Map of booleans: `datasources`, `metrics`, `external_assets`, `widgets`, `writeback`. An absent one means `false`. Other keys are rejected. |
-| `license` | no | SPDX identifier or a short license name, up to 128 characters. |
+| `license` | no | SPDX identifier or a short license name, up to 128 characters, shown in the catalog. Integrations in this repository are `Apache-2.0` by default; another value needs the license text in `LICENSE` in the integration folder ([Licensing](../CONTRIBUTING.md#licensing)). |
 | `provides` | no | Data standards the integration implements: `contractKey@X.Y.Z`, for example `finance.accounting@1.0.0`. |
 | `deployment` | no | How the installation runs the integration besides its bundle. See below. |
 

@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "INTERA bundle for the Hello .NET sample integration",
+  "license": "Apache-2.0",
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "npm run clean && tsc -p tsconfig.json",

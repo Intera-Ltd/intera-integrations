@@ -13,6 +13,7 @@ categories: [external-data]       # keys from the catalog, see docs/manifest-ref
 roles: []
 capabilities:
   datasources: true
+license: Apache-2.0               # repository default; for another license add LICENSE next to this file
 deployment:
   type: docker
   # Keep the placeholder: the release workflow writes the real digest.

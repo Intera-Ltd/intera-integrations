@@ -10,6 +10,7 @@ language, with a thin TypeScript bundle in front of it.
 | Runtime id | `hello_dotnet` |
 | Version | 1.0.0 |
 | Integration Contract | 2 |
+| License | Apache-2.0 (the repository license) |
 | Deployment | Docker, port 8080, health path `/health` |
 | Data sources | `items` — "Hello .NET items" |
 
@@ -96,3 +97,7 @@ Tag `intera/hello-dotnet/v1.0.0`. The release workflow pushes
 `ghcr.io/intera-ltd/hello-dotnet:1.0.0` (linux/amd64 and linux/arm64), writes
 its digest into the packed manifest and attaches
 `intera-hello-dotnet-1.0.0.tar.gz` to the GitHub release.
+
+## License
+
+Apache-2.0, see [LICENSE](../../../LICENSE).

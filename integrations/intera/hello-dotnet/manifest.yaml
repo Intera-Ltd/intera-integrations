@@ -13,6 +13,7 @@ categories: [external-data]
 roles: [financial]
 capabilities:
   datasources: true
+license: Apache-2.0               # the repository license
 deployment:
   type: docker
   # Placeholder digest: CI (or scripts/set-image-digest.sh) writes the real one

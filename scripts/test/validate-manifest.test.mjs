@@ -1,7 +1,7 @@
 // Unit tests of the manifest pre-check: node --test scripts/test/
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { checkManifest } from '../validate-manifest.mjs';
+import { checkLicense, checkManifest } from '../validate-manifest.mjs';
 
 const DIGEST = 'a'.repeat(64);
 
@@ -154,4 +154,30 @@ test('settings are not allowed for type none', () => {
   const problems = [];
   checkManifest({ ...manifest({}), deployment: { type: 'none', settings: [] } }, problems, [], { release: false });
   assert.deepEqual(problems, ['deployment.settings: unknown field for type none']);
+});
+
+function license(value, hasLicenseFile) {
+  const problems = [];
+  const warnings = [];
+  checkLicense(value, hasLicenseFile, problems, warnings);
+  return { problems, warnings };
+}
+
+test('the repository license needs no LICENSE file in the folder', () => {
+  assert.deepEqual(license('Apache-2.0', false), { problems: [], warnings: [] });
+});
+
+test('another license needs its LICENSE file in the folder', () => {
+  assert.match(license('MIT', false).problems[0], /add its text as LICENSE/);
+  assert.deepEqual(license('MIT', true), { problems: [], warnings: [] });
+});
+
+test('a LICENSE file in the folder needs the license field', () => {
+  assert.match(license(undefined, true).problems[0], /must name it in license/);
+});
+
+test('no license field and no LICENSE file is a warning', () => {
+  const { problems, warnings } = license(undefined, false);
+  assert.deepEqual(problems, []);
+  assert.match(warnings[0], /Apache-2.0 applies/);
 });

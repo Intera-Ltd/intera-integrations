@@ -44,7 +44,7 @@ find . -name '*.bak' -delete
 
 Then edit:
 
-- `manifest.yaml` — name, version, compatibility, categories, roles
+- `manifest.yaml` — name, version, compatibility, categories, roles, license
   ([reference](manifest-reference.md));
 - `bundle/src/constants.ts` — the same runtime id and version;
 - `bundle/src/*.datasource.ts` — your data sources ([contract](bundle-contract.md));

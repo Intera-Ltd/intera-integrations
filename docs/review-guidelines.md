@@ -21,6 +21,9 @@ as a self-check before asking for review.
       data sources and fields; `CHANGELOG.md` has an entry for the version.
 - [ ] Breaking changes (removed fields, renamed data sources, changed
       identity) are called out.
+- [ ] `license` is `Apache-2.0`, or another license whose full text is in
+      `LICENSE` in the integration folder
+      ([Licensing](../CONTRIBUTING.md#licensing)).
 
 ## Bundle
 

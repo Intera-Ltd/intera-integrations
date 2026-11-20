@@ -240,8 +240,27 @@ function checkSettings(settings, env, fail, warnings) {
   }
 }
 
+export const REPOSITORY_LICENSE = 'Apache-2.0';
+const LICENSE_FILES = ['LICENSE', 'LICENSE.md', 'LICENSE.txt'];
+
+/**
+ * License of an integration folder. The repository license (Apache-2.0)
+ * applies unless the folder brings its own: then a LICENSE file in the folder
+ * and the `license` field in manifest.yaml are both required.
+ */
+export function checkLicense(license, hasLicenseFile, problems, warnings) {
+  if (license === undefined || license === null) {
+    if (hasLicenseFile) problems.push('the folder has a LICENSE file, so manifest.yaml must name it in license');
+    else warnings.push(`license: not set; the repository license ${REPOSITORY_LICENSE} applies, declare it so the catalog shows it`);
+    return;
+  }
+  if (typeof license === 'string' && license !== REPOSITORY_LICENSE && !hasLicenseFile) {
+    problems.push(`license: ${show(license)} differs from the repository license ${REPOSITORY_LICENSE}; add its text as LICENSE in the integration folder`);
+  }
+}
+
 /** Layout rules for integrations/<developer>/<slug>/. */
-function checkLayout(dir, manifest, problems) {
+function checkLayout(dir, manifest, problems, warnings) {
   const rel = path.relative(ROOT, dir).split(path.sep);
   if (rel[0] !== 'integrations') return;
   const [, developer, slug] = rel;
@@ -258,6 +277,8 @@ function checkLayout(dir, manifest, problems) {
   if (manifest?.deployment?.type === 'docker' && !fs.existsSync(path.join(dir, 'service', 'Dockerfile'))) {
     problems.push('deployment.type is docker but service/Dockerfile is missing');
   }
+  const hasLicenseFile = LICENSE_FILES.some((file) => fs.existsSync(path.join(dir, file)));
+  checkLicense(isRecord(manifest) ? manifest.license : undefined, hasLicenseFile, problems, warnings);
 }
 
 /** When the bundle is built, its runtime manifest must agree with manifest.yaml. */
@@ -348,7 +369,7 @@ function main(argv) {
     }
     if (manifest !== undefined) {
       checkManifest(manifest, problems, warnings, { release });
-      checkLayout(dir, manifest, problems);
+      checkLayout(dir, manifest, problems, warnings);
       if (isRecord(manifest)) checkBuiltBundle(dir, manifest, problems, warnings);
     }
     for (const warning of warnings) console.log(`::warning title=${label}::${warning}`);

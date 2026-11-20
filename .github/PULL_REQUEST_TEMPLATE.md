@@ -23,6 +23,7 @@
 - [ ] One integration per pull request (or a repository-only change)
 - [ ] Version bumped in `manifest.yaml`, the bundle and `package.json`; `CHANGELOG.md` updated
 - [ ] `README.md` describes configuration and data sources
+- [ ] My contribution is licensed under Apache-2.0, or the integration declares its own `license` and has its `LICENSE` file
 - [ ] No secrets, internal hostnames, IP addresses or customer names anywhere
 - [ ] `deployment.image` keeps the placeholder digest (CI writes the real one)
 - [ ] I followed the [review guidelines](../docs/review-guidelines.md) and [security rules](../docs/security.md)
