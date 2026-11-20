@@ -1,9 +1,6 @@
 # Code owners review every pull request that touches their paths.
 #
-# PLACEHOLDER: `@Intera-Ltd/integrations-maintainers` is not created yet.
-# Create the team in the organization (or replace it with the right team) and
-# give it write access to this repository; until then GitHub ignores these
-# lines and no reviewer is requested automatically.
+# Owners: the `integrations-maintainers` team of the Intera-Ltd organization.
 #
 # Third-party developers may be added as owners of their own folder, e.g.:
 #   /integrations/acme/  @acme-org/intera-maintainers
