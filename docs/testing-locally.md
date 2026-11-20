@@ -8,7 +8,7 @@ INTERA installation is needed.
 ```bash
 cd integrations/<developer>/<integration>/bundle
 npm ci
-npm test        # tsc build + node --test test/
+npm test        # tsc build + node --test test/*.test.mjs
 ```
 
 The tests load `dist/index.js` the way Core does and replace the global

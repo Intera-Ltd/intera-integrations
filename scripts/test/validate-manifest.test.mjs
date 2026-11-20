@@ -1,4 +1,4 @@
-// Unit tests of the manifest pre-check: node --test scripts/test/
+// Unit tests of the manifest pre-check: npm test (node --test scripts/test/*.test.mjs)
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { checkLicense, checkManifest } from '../validate-manifest.mjs';
