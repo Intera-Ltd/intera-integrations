@@ -1,0 +1,25 @@
+# Catalog manifest of the Hello .NET sample integration.
+# Reference: docs/manifest-reference.md
+id: intera.hello-dotnet
+name: Hello .NET
+version: '1.0.0'
+runtime_id: hello_dotnet          # equals manifest.id inside the bundle
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [external-data]
+roles: [financial]
+capabilities:
+  datasources: true
+license: Apache-2.0               # the repository license
+deployment:
+  type: docker
+  # Placeholder digest: CI (or scripts/set-image-digest.sh) writes the real one
+  # into the packaged manifest after the image is built and pushed.
+  image: ghcr.io/intera-ltd/hello-dotnet@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'

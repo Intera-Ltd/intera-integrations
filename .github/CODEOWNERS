@@ -1,0 +1,11 @@
+# Code owners review every pull request that touches their paths.
+#
+# Owners: the `integrations-maintainers` team of the Intera-Ltd organization.
+#
+# Third-party developers may be added as owners of their own folder, e.g.:
+#   /integrations/acme/  @acme-org/intera-maintainers
+
+*                       @Intera-Ltd/integrations-maintainers
+/.github/               @Intera-Ltd/integrations-maintainers
+/scripts/               @Intera-Ltd/integrations-maintainers
+/integrations/intera/   @Intera-Ltd/integrations-maintainers

@@ -1,0 +1,39 @@
+# Catalog manifest. Reference: docs/manifest-reference.md
+# Replace every "your-org" / "your-integration" / "your_integration".
+id: your-org.your-integration     # <developer>.<integration>, equals the folder names
+name: Your Integration
+version: '0.1.0'
+runtime_id: your_integration      # equals manifest.id inside the bundle
+developer:
+  id: your-org
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [external-data]       # keys from the catalog, see docs/manifest-reference.md
+roles: []
+capabilities:
+  datasources: true
+license: Apache-2.0               # repository default; for another license add LICENSE next to this file
+deployment:
+  type: docker
+  # Keep the placeholder: the release workflow writes the real digest.
+  image: ghcr.io/intera-ltd/your-integration@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  # Fixed, public variables of the container (never secrets):
+  # env:
+  #   LOG_LEVEL: 'info'
+  # Values the administrator of the installation sets at install time and
+  # later. The service reads them as environment variables. Secrets are stored
+  # encrypted by the installation; a secret has no default.
+  # settings:
+  #   - name: api_token              # a-z 0-9 _, starts with a letter
+  #     label: API token
+  #     description: Token of the upstream service account
+  #     kind: secret                 # string | secret | number | boolean
+  #     required: true
+  #     env: UPSTREAM_API_TOKEN      # default: the name in upper case (API_TOKEN)
+  #   - name: region
+  #     label: Region
+  #     kind: string
+  #     default: 'eu'

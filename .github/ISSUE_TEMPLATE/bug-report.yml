@@ -1,0 +1,33 @@
+name: Bug report
+description: Something in an integration, template or script does not work.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems: please use **Report a vulnerability** in the Security tab instead.
+        Remove secrets, hostnames and personal data from logs before pasting them.
+  - type: input
+    id: integration
+    attributes:
+      label: Integration and version
+      description: e.g. `intera.hello-dotnet` 1.0.0, or the template/script name
+    validations:
+      required: true
+  - type: input
+    id: intera
+    attributes:
+      label: INTERA version
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error messages
+      render: text

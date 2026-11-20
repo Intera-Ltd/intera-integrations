@@ -1,0 +1,16 @@
+{
+  "name": "intera-integrations",
+  "private": true,
+  "description": "Repository tooling: manifest checks and artifact packing",
+  "scripts": {
+    "validate": "node scripts/validate-manifest.mjs",
+    "validate:all": "node scripts/validate-manifest.mjs --all",
+    "test": "node --test scripts/test/*.test.mjs"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
