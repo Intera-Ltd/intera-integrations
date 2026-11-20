@@ -1,0 +1,21 @@
+# Catalog manifest. Reference: docs/manifest-reference.md
+# Replace every "your-org" / "your-integration" / "your_integration".
+id: your-org.your-integration     # <developer>.<integration>, equals the folder names
+name: Your Integration
+version: '0.1.0'
+runtime_id: your_integration      # equals manifest.id inside the bundle
+developer:
+  id: your-org
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [external-data]       # keys from the catalog, see docs/manifest-reference.md
+roles: []
+capabilities:
+  datasources: true
+deployment:
+  type: docker
+  # Keep the placeholder: the release workflow writes the real digest.
+  image: ghcr.io/intera-ltd/your-integration@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health

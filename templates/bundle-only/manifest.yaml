@@ -1,0 +1,16 @@
+# Catalog manifest. Reference: docs/manifest-reference.md
+# Replace every "your-org" / "your-integration" / "your_integration".
+id: your-org.your-integration     # <developer>.<integration>, equals the folder names
+name: Your Integration
+version: '0.1.0'
+runtime_id: your_integration      # equals manifest.id inside the bundle
+developer:
+  id: your-org
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [external-data]       # keys from the catalog, see docs/manifest-reference.md
+roles: []
+capabilities:
+  datasources: true
+# No deployment section: Core loads the bundle only (type: none).

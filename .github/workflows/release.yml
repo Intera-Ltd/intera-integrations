@@ -1,0 +1,183 @@
+name: Release
+
+# A tag <developer>/<integration>/v<version> releases one integration:
+# the service image goes to ghcr.io/<owner>/<integration>:<version>, its
+# digest is written into the packed manifest.yaml, and the artifact
+# (<developer>-<integration>-<version>.tar.gz) is attached to a GitHub release.
+on:
+  push:
+    tags: ['*/*/v*']
+  workflow_dispatch:
+    inputs:
+      integration:
+        description: 'Integration folder under integrations/, e.g. intera/hello-dotnet'
+        required: true
+        type: string
+      create_release:
+        description: 'Also create the GitHub release and its tag (otherwise only push the image and keep the artifact on the run)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}-${{ inputs.integration }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the release and its tag
+      packages: write   # push the image to ghcr.io
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Repository tooling
+        run: npm ci
+
+      - name: Resolve the integration
+        id: target
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT: ${{ inputs.integration }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          slug='[a-z0-9]+(-[a-z0-9]+)*'
+          if [ "$EVENT" = "push" ]; then
+            if ! [[ $REF_NAME =~ ^($slug)/($slug)/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              echo "::error::Tag $REF_NAME is not <developer>/<integration>/v<X.Y.Z>"; exit 1
+            fi
+            developer=${BASH_REMATCH[1]}; integration=${BASH_REMATCH[3]}; tag_version=${BASH_REMATCH[5]}
+          else
+            if ! [[ $INPUT =~ ^($slug)/($slug)$ ]]; then
+              echo "::error::'$INPUT' is not <developer>/<integration>"; exit 1
+            fi
+            developer=${BASH_REMATCH[1]}; integration=${BASH_REMATCH[3]}; tag_version=""
+          fi
+          dir="integrations/$developer/$integration"
+          [ -f "$dir/manifest.yaml" ] || { echo "::error::$dir/manifest.yaml not found"; exit 1; }
+          version=$(node -e "const y=require('js-yaml');const m=y.load(require('fs').readFileSync(process.argv[1],'utf8'),{schema:y.CORE_SCHEMA});process.stdout.write(String(m.version))" "$dir/manifest.yaml")
+          if [ -n "$tag_version" ] && [ "$tag_version" != "$version" ]; then
+            echo "::error::Tag version $tag_version does not match manifest.yaml version $version"; exit 1
+          fi
+          {
+            echo "dir=$dir"
+            echo "developer=$developer"
+            echo "integration=$integration"
+            echo "version=$version"
+            echo "tag=$developer/$integration/v$version"
+            echo "image=ghcr.io/${OWNER,,}/$integration"
+            if [ -f "$dir/service/Dockerfile" ]; then echo "service=true"; else echo "service=false"; fi
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Bundle - install, build, unit tests
+        env:
+          DIR: ${{ steps.target.outputs.dir }}
+        run: |
+          cd "$DIR/bundle"
+          npm ci --no-audit --no-fund
+          npm test
+          cd - >/dev/null
+          node scripts/validate-manifest.mjs "$DIR"
+
+      - uses: docker/setup-qemu-action@v3
+        if: steps.target.outputs.service == 'true'
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.target.outputs.service == 'true'
+
+      - uses: docker/login-action@v3
+        if: steps.target.outputs.service == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the service image
+        id: image
+        if: steps.target.outputs.service == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.target.outputs.dir }}/service
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.target.outputs.image }}:${{ steps.target.outputs.version }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.target.outputs.version }}
+            org.opencontainers.image.title=${{ steps.target.outputs.developer }}.${{ steps.target.outputs.integration }}
+
+      - name: Pack the artifact with the image digest
+        id: pack
+        env:
+          DIR: ${{ steps.target.outputs.dir }}
+          SERVICE: ${{ steps.target.outputs.service }}
+          IMAGE: ${{ steps.target.outputs.image }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          if [ "$SERVICE" = "true" ]; then
+            archive=$(scripts/pack.sh "$DIR" --image "$IMAGE@$DIGEST" --out-dir out --release | tail -1)
+          else
+            archive=$(scripts/pack.sh "$DIR" --out-dir out --release | tail -1)
+          fi
+          tar -tzf "$archive"
+          {
+            echo "archive=$archive"
+            echo "name=$(basename "$archive" .tar.gz)"
+            echo "sha256=$(sha256sum "$archive" | cut -d' ' -f1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          IMAGE: ${{ steps.target.outputs.image }}
+          VERSION: ${{ steps.target.outputs.version }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+          ARCHIVE: ${{ steps.pack.outputs.archive }}
+          ARCHIVE_SHA: ${{ steps.pack.outputs.sha256 }}
+        run: |
+          {
+            echo "## ${{ steps.target.outputs.developer }}.${{ steps.target.outputs.integration }} $VERSION"
+            echo
+            if [ "$SERVICE" = "true" ]; then
+              echo "- Image: \`$IMAGE:$VERSION\`"
+              echo "- Digest: \`$DIGEST\`"
+              echo "- deployment.image: \`$IMAGE@$DIGEST\`"
+            fi
+            echo "- Artifact: \`$(basename "$ARCHIVE")\` (sha256 \`$ARCHIVE_SHA\`)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pack.outputs.name }}
+          path: ${{ steps.pack.outputs.archive }}
+          if-no-files-found: error
+
+      - name: GitHub release
+        if: github.event_name == 'push' || inputs.create_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.target.outputs.tag }}
+          SERVICE: ${{ steps.target.outputs.service }}
+          IMAGE: ${{ steps.target.outputs.image }}
+          VERSION: ${{ steps.target.outputs.version }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+          ARCHIVE: ${{ steps.pack.outputs.archive }}
+          ARCHIVE_SHA: ${{ steps.pack.outputs.sha256 }}
+        run: |
+          {
+            echo "Catalog artifact: \`$(basename "$ARCHIVE")\` (sha256 \`$ARCHIVE_SHA\`)."
+            if [ "$SERVICE" = "true" ]; then
+              echo
+              echo "Service image: \`$IMAGE@$DIGEST\` (tag \`$VERSION\`)."
+            fi
+          } > notes.md
+          gh release create "$TAG" "$ARCHIVE" --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"

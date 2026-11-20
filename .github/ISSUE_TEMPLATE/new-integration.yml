@@ -1,0 +1,51 @@
+name: New integration
+description: Propose a new integration before you open a pull request.
+title: "[New integration] "
+labels: ["new-integration"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! Agreeing on the basics first saves review time.
+        Do not include secrets, internal hostnames or customer names.
+  - type: input
+    id: id
+    attributes:
+      label: Proposed catalog id
+      description: "`<developer>.<integration>`, lowercase, e.g. `acme.billing`"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What it does
+      description: Which system it reads from, which data it exposes, who needs it.
+    validations:
+      required: true
+  - type: dropdown
+    id: shape
+    attributes:
+      label: Shape
+      options:
+        - Bundle only (calls an external API)
+        - Bundle + Docker service
+    validations:
+      required: true
+  - type: input
+    id: categories
+    attributes:
+      label: Categories and Role Packages
+      description: Catalog keys, see docs/manifest-reference.md
+  - type: dropdown
+    id: account
+    attributes:
+      label: Developer account in the Integration Library
+      options:
+        - I already have one
+        - I need one
+        - Not sure
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Configuration the administrator enters, rate limits, licensing of the upstream API.
