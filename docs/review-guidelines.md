@@ -40,7 +40,10 @@ as a self-check before asking for review.
 - [ ] Multi-stage build, official base images, runs as non-root.
 - [ ] Listens on `deployment.port`; `deployment.health_path` answers 2xx only
       when ready.
-- [ ] `deployment.env` holds public values only.
+- [ ] `deployment.env` holds public values only; secrets of the service are
+      `deployment.settings` with `kind: secret`, without a `default`.
+- [ ] The service reads its settings at startup and fails clearly when a
+      required one is missing.
 - [ ] No secrets, test credentials or private data baked into the image.
 - [ ] Logs go to stdout/stderr and never print secrets.
 

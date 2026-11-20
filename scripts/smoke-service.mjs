@@ -3,6 +3,10 @@
 // installation agent does, then calls the built bundle against it the way
 // Core does (testConnection and every data source, with intera_service_url).
 //
+// deployment.settings get their default; a setting without one gets an
+// obviously fake value (secrets and strings "smoke-test", numbers 0, booleans
+// false), so a service that requires a setting still starts.
+//
 // Usage: node scripts/smoke-service.mjs <integration-dir> <local-image>
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -24,7 +28,13 @@ if (deployment?.type !== 'docker') {
 }
 
 const name = `smoke-${process.pid}`;
-const env = Object.entries(deployment.env ?? {}).flatMap(([key, value]) => ['-e', `${key}=${value}`]);
+const FAKE = { string: 'smoke-test', secret: 'smoke-test', number: 0, boolean: false };
+const variables = { ...(deployment.env ?? {}) };
+for (const setting of deployment.settings ?? []) {
+  const value = setting.default ?? FAKE[setting.kind];
+  variables[setting.env ?? setting.name.toUpperCase()] = String(value);
+}
+const env = Object.entries(variables).flatMap(([key, value]) => ['-e', `${key}=${value}`]);
 execFileSync('docker', ['run', '-d', '--name', name, '-p', `127.0.0.1::${deployment.port}`, ...env, image], { stdio: 'inherit' });
 const cleanup = () => spawnSync('docker', ['rm', '-f', name], { stdio: 'ignore' });
 

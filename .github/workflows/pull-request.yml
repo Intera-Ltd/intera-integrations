@@ -24,6 +24,8 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      - name: Unit tests of the repository scripts
+        run: npm test
       - name: Check every manifest.yaml and the repository layout
         run: node scripts/validate-manifest.mjs --all
 

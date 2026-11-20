@@ -85,7 +85,8 @@ scripts/pack.sh integrations/intera/hello-dotnet
 
 The packed manifest keeps the placeholder digest unless you pass a pushed
 image: `scripts/pack.sh integrations/intera/hello-dotnet --image <registry>/hello-dotnet:1.0.0`
-resolves its digest and writes it into the archive. See
+resolves its digest and writes it into the archive; add
+`--stage-dir <dir>` to get the plugin folder for `intera-library publish`. See
 [docs/testing-locally.md](../../../docs/testing-locally.md) and
 [docs/publishing.md](../../../docs/publishing.md).
 

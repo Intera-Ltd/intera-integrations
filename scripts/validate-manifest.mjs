@@ -35,12 +35,22 @@ const CONTRACT_VERSIONS = [2];
 const TOP_LEVEL = ['id', 'name', 'version', 'runtime_id', 'developer', 'compatibility', 'categories', 'roles', 'capabilities', 'license', 'provides', 'deployment'];
 const COMPATIBILITY = ['intera', 'intera_min', 'intera_max', 'integration_contract'];
 const CAPABILITIES = ['datasources', 'metrics', 'external_assets', 'widgets', 'writeback'];
-const DOCKER_KEYS = ['type', 'image', 'port', 'health_path', 'env'];
+const DOCKER_KEYS = ['type', 'image', 'port', 'health_path', 'env', 'settings'];
+const SETTING_KEYS = ['name', 'label', 'description', 'kind', 'required', 'env', 'default'];
+const SETTING_KINDS = ['string', 'secret', 'number', 'boolean'];
+const SETTING_NAME = /^[a-z][a-z0-9_]{0,63}$/;
+// The installation agent passes setting values through the environment of the
+// docker CLI, so these names are taken.
+const RESERVED_SETTING_ENV = /^(?:PATH|HOME|DOCKER_.*)$/;
+const MAX_SETTINGS = 30;
+const MAX_VARIABLES = 50; // deployment.env and deployment.settings together
+const MAX_ENV_VALUE = 4096;
+const SECRET_NAME = /(secret|token|password|passwd|api_?key|private_?key|credential)/i;
 
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const show = (value) => (typeof value === 'string' ? JSON.stringify(value) : String(value));
 
-function checkManifest(manifest, problems, warnings, { release }) {
+export function checkManifest(manifest, problems, warnings, { release }) {
   const fail = (field, message) => problems.push(field ? `${field}: ${message}` : message);
   if (!isRecord(manifest)) {
     fail('', 'manifest.yaml must be a mapping');
@@ -123,7 +133,7 @@ function checkManifest(manifest, problems, warnings, { release }) {
   }
   if (deployment.type !== 'docker') return fail('deployment.type', `must be none or docker; got ${show(deployment.type)}`);
   for (const key of Object.keys(deployment)) {
-    if (!DOCKER_KEYS.includes(key)) fail(`deployment.${key}`, 'unknown field (deployment.settings is coming in the next platform release)');
+    if (!DOCKER_KEYS.includes(key)) fail(`deployment.${key}`, 'unknown field');
   }
   if (manifest.runtime_id === undefined) fail('runtime_id', 'is required to install an integration from Marketplace');
   if (typeof deployment.image !== 'string' || !IMAGE.test(deployment.image)) {
@@ -138,18 +148,95 @@ function checkManifest(manifest, problems, warnings, { release }) {
   if (deployment.health_path !== undefined && (typeof deployment.health_path !== 'string' || !HEALTH_PATH.test(deployment.health_path))) {
     fail('deployment.health_path', `must be an absolute path such as /health; got ${show(deployment.health_path)}`);
   }
+  const env = isRecord(deployment.env) ? deployment.env : {};
   if (deployment.env !== undefined) {
     if (!isRecord(deployment.env)) fail('deployment.env', 'must be a mapping');
     else {
-      if (Object.keys(deployment.env).length > 50) fail('deployment.env', 'must have at most 50 variables');
-      for (const [name, value] of Object.entries(deployment.env)) {
+      if (Object.keys(env).length > MAX_VARIABLES) fail('deployment.env', `must have at most ${MAX_VARIABLES} variables`);
+      for (const [name, value] of Object.entries(env)) {
         if (!ENV_NAME.test(name)) fail(`deployment.env.${name}`, 'must be an upper snake case name');
-        if (typeof value !== 'string') fail(`deployment.env.${name}`, 'must be a quoted string');
-        if (/(secret|token|password|passwd|api_?key|private_?key|credential)/i.test(name)) {
-          fail(`deployment.env.${name}`, 'looks like a secret; manifests are public, never put secrets in them');
+        if (typeof value !== 'string' || value.length > MAX_ENV_VALUE) fail(`deployment.env.${name}`, `must be a quoted string of at most ${MAX_ENV_VALUE} characters`);
+        if (SECRET_NAME.test(name)) {
+          fail(`deployment.env.${name}`, 'looks like a secret; manifests are public: declare it in deployment.settings with kind: secret');
         }
       }
     }
+  }
+  checkSettings(deployment.settings, env, fail, warnings);
+}
+
+/** A setting's default has the type of its kind; a secret has none. */
+function checkSettingDefault(setting, at, fail) {
+  const value = setting.default;
+  if (value === undefined || value === null) return;
+  const field = `${at}.default`;
+  if (setting.kind === 'secret') fail(field, 'a secret has no default: the installation sets it');
+  else if (setting.kind === 'number' && (typeof value !== 'number' || !Number.isFinite(value))) fail(field, `must be a number; got ${show(value)}`);
+  else if (setting.kind === 'boolean' && typeof value !== 'boolean') fail(field, `must be true or false; got ${show(value)}`);
+  else if (setting.kind === 'string' && (typeof value !== 'string' || value.length > MAX_ENV_VALUE)) {
+    fail(field, `must be a string of at most ${MAX_ENV_VALUE} characters; got ${show(value)}`);
+  }
+}
+
+/**
+ * deployment.settings: values of the container that the administrator of the
+ * installation sets. Names and variables are unique and do not repeat
+ * deployment.env; env and settings together hold at most 50 variables.
+ */
+function checkSettings(settings, env, fail, warnings) {
+  if (settings === undefined || settings === null) return;
+  if (!Array.isArray(settings)) return fail('deployment.settings', 'must be a list');
+  if (settings.length > MAX_SETTINGS) return fail('deployment.settings', `must have at most ${MAX_SETTINGS} settings`);
+  const names = new Set();
+  const variables = new Set(Object.keys(env));
+  let count = 0;
+  settings.forEach((setting, i) => {
+    const at = `deployment.settings[${i}]`;
+    if (!isRecord(setting)) return fail(at, `must be a mapping with name, label and kind; got ${show(setting)}`);
+    for (const key of Object.keys(setting)) if (!SETTING_KEYS.includes(key)) fail(`${at}.${key}`, 'unknown field');
+    let ok = true;
+    const { name, label, description, kind, required } = setting;
+    if (typeof name !== 'string' || !SETTING_NAME.test(name)) {
+      fail(`${at}.name`, `must be a lowercase key a-z 0-9 _ that starts with a letter, up to 64 characters; got ${show(name)}`);
+      ok = false;
+    }
+    if (typeof label !== 'string' || label.trim() === '' || label.length > 128) {
+      fail(`${at}.label`, `must be a non-empty string of at most 128 characters; got ${show(label)}`);
+      ok = false;
+    }
+    if (description !== undefined && description !== null && (typeof description !== 'string' || description.length > 500)) {
+      fail(`${at}.description`, 'must be a string of at most 500 characters');
+    }
+    if (!SETTING_KINDS.includes(kind)) {
+      fail(`${at}.kind`, `must be one of ${SETTING_KINDS.join(', ')}; got ${show(kind)}`);
+      ok = false;
+    }
+    if (required !== undefined && typeof required !== 'boolean') fail(`${at}.required`, `must be true or false; got ${show(required)}`);
+    let variable = typeof name === 'string' ? name.toUpperCase() : null;
+    if (setting.env !== undefined && setting.env !== null) {
+      variable = setting.env;
+      if (typeof variable !== 'string' || variable.length > 64 || !ENV_NAME.test(variable)) {
+        fail(`${at}.env`, `must be an upper snake case name of at most 64 characters; got ${show(variable)}`);
+        variable = null;
+      }
+    }
+    if (variable !== null && RESERVED_SETTING_ENV.test(variable)) {
+      fail(`${at}.env`, `${variable} is reserved (PATH, HOME and DOCKER_* are taken by the installation agent)`);
+      variable = null;
+    }
+    if (SETTING_KINDS.includes(kind)) checkSettingDefault(setting, at, fail);
+    if (kind !== 'secret' && typeof name === 'string' && (SECRET_NAME.test(name) || SECRET_NAME.test(variable ?? ''))) {
+      warnings.push(`${at}: ${show(name)} looks like a secret; use kind: secret so the installation stores it encrypted`);
+    }
+    if (!ok || variable === null) return;
+    if (names.has(name)) return fail(`${at}.name`, `duplicates ${show(name)}`);
+    if (variables.has(variable)) return fail(`${at}.env`, `${variable} is already set by deployment.env or another setting`);
+    names.add(name);
+    variables.add(variable);
+    count += 1;
+  });
+  if (Object.keys(env).length + count > MAX_VARIABLES) {
+    fail('deployment.settings', `env and settings together must have at most ${MAX_VARIABLES} variables`);
   }
 }
 
@@ -278,4 +365,6 @@ function main(argv) {
   return failed || repoProblems.length > 0 ? 1 : 0;
 }
 
-process.exitCode = main(process.argv.slice(2));
+if (process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(import.meta.url))) {
+  process.exitCode = main(process.argv.slice(2));
+}

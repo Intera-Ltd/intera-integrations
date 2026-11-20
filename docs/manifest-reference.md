@@ -31,7 +31,14 @@ deployment:
   port: 8080
   health_path: /health
   env:
-    LOG_LEVEL: info
+    LOG_LEVEL: 'info'
+  settings:
+    - name: api_token
+      label: API token
+      kind: secret
+      required: true
+      env: BILLING__APITOKEN
+    - { name: region, label: Region, kind: string, default: 'eu' }
 ```
 
 ## Fields
@@ -99,23 +106,77 @@ Absent or `type: none`: Core loads the bundle only.
 | `image` | yes | Image **pinned by digest**: `<registry>/<repository>@sha256:<64 hex>`, lowercase, up to 512 characters. Tags are not accepted. |
 | `port` | yes | Container port the bundle calls, 1–65535. |
 | `health_path` | no | Absolute path the agent polls until it answers 2xx, for example `/health`. Strongly recommended. |
-| `env` | no | Fixed environment variables: up to 50, names `^[A-Z_][A-Z0-9_]*$`, values quoted strings up to 4096 characters. **Public values only** — never secrets. |
+| `env` | no | Fixed environment variables: names `^[A-Z_][A-Z0-9_]*$`, values quoted strings up to 4096 characters. **Public values only** — never secrets. |
+| `settings` | no | Values and secrets of the container that the administrator of the installation sets. See below. |
+
+`env` and `settings` together give the container at most 50 variables, and
+no variable is declared twice.
 
 In this repository, `deployment.image` holds a placeholder digest
 (`@sha256:000…000`). The release workflow builds the image, pushes it and
 writes the real digest into the packed manifest. See
 [Publishing](publishing.md).
 
-### Coming in the next platform release
+### `deployment.settings`
 
-These are being added to the platform and are **not accepted yet** by the
-catalog. Do not use them until this document says they are available.
+A list of up to 30 settings. The administrator fills them in a form when
+installing the integration from Marketplace, and can change them later
+(**Container settings** on the installed integration). The service reads them
+as environment variables.
 
-- **`deployment.settings`** — values and secrets of the container that the
-  administrator sets at installation time (for example an upstream API key),
-  instead of fixed `env` values.
-- **Private registries** — images from registries that need credentials.
-  Until then, images must be pullable anonymously.
+| Field | Required | Rules |
+| --- | --- | --- |
+| `name` | yes | Key `^[a-z][a-z0-9_]{0,63}$`, unique within the list. |
+| `label` | yes | Label of the form field, up to 128 characters. |
+| `description` | no | Hint under the field, up to 500 characters. |
+| `kind` | yes | `string`, `secret`, `number` or `boolean`. |
+| `required` | no | `true`: the integration cannot be installed without a value (unless there is a `default`). |
+| `env` | no | Name of the variable in the container, `^[A-Z_][A-Z0-9_]*$`. Defaults to `name` in upper case. `PATH`, `HOME` and `DOCKER_*` are taken by the installation agent. |
+| `default` | no | Value of the same type, used when the administrator sets nothing. A `secret` has no default. |
+
+```yaml
+deployment:
+  # ...
+  settings:
+    - name: api_token
+      label: API token
+      description: Token of the Billing service account
+      kind: secret
+      required: true
+      env: BILLING__APITOKEN      # .NET reads "__" as a nested key: Billing:ApiToken
+    - { name: region, label: Region, kind: string, default: 'eu' }
+    - { name: timeout_sec, label: Timeout, kind: number, default: 30 }
+    - { name: verbose, label: Verbose log, kind: boolean, default: false }
+```
+
+How the values behave:
+
+- The container gets every value as a string: a `number` as digits (`30`), a
+  `boolean` as `true` or `false`. Values are up to 4096 characters; multi-line
+  values (a PEM key) are fine.
+- Secrets are stored encrypted by the installation and never returned by its
+  API. Inside the container a secret is an ordinary environment variable.
+- Changing the values redeploys the container: the new one starts next to the
+  old one and takes over once it is healthy. Core is not restarted.
+- On update, values whose name and kind still match the new version are kept.
+  A new required setting without a default has to be filled in before the
+  update can run.
+- Settings go to the container only. A value the bundle needs belongs in the
+  bundle's `configSchema` (the connection settings).
+
+### Images from private registries
+
+The image may live in a registry that needs credentials. The credentials
+belong to the installation, not to the integration: the operator of the
+installation configures them on its installation agent
+(`INTEGRATION_AGENT_REGISTRY_AUTH`). They never go into the manifest or the
+catalog. If the registry refuses the pull, the installation stops with
+`INTEGRATION_AGENT_IMAGE_PULL_DENIED` and, on an update, the previous version
+keeps running.
+
+For integrations in the public catalog a public image is still the simpler
+choice: every installation can pull it without extra setup. The release
+workflow of this repository pushes public images to `ghcr.io/intera-ltd`.
 
 ## Two manifests
 

@@ -19,3 +19,20 @@ deployment:
   image: ghcr.io/intera-ltd/your-integration@sha256:0000000000000000000000000000000000000000000000000000000000000000
   port: 8080
   health_path: /health
+  # Fixed, public variables of the container (never secrets):
+  # env:
+  #   LOG_LEVEL: 'info'
+  # Values the administrator of the installation sets at install time and
+  # later. The service reads them as environment variables. Secrets are stored
+  # encrypted by the installation; a secret has no default.
+  # settings:
+  #   - name: api_token              # a-z 0-9 _, starts with a letter
+  #     label: API token
+  #     description: Token of the upstream service account
+  #     kind: secret                 # string | secret | number | boolean
+  #     required: true
+  #     env: UPSTREAM_API_TOKEN      # default: the name in upper case (API_TOKEN)
+  #   - name: region
+  #     label: Region
+  #     kind: string
+  #     default: 'eu'

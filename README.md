@@ -51,6 +51,9 @@ node scripts/validate-manifest.mjs integrations/intera/hello-dotnet
 scripts/pack.sh integrations/intera/hello-dotnet     # -> out/intera-hello-dotnet-1.0.0.tar.gz
 ```
 
+Versions are uploaded to the catalog with the `intera-library` CLI
+(`intera-library publish <plugin-dir>`); see [Publishing](docs/publishing.md).
+
 Then read [Getting started](docs/getting-started.md) to build your own.
 
 ## Documentation

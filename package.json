@@ -4,7 +4,8 @@
   "description": "Repository tooling: manifest checks and artifact packing",
   "scripts": {
     "validate": "node scripts/validate-manifest.mjs",
-    "validate:all": "node scripts/validate-manifest.mjs --all"
+    "validate:all": "node scripts/validate-manifest.mjs --all",
+    "test": "node --test scripts/test/"
   },
   "devDependencies": {
     "js-yaml": "^4.1.0"

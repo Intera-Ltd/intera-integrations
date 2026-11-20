@@ -2,6 +2,8 @@
 // The contract with the bundle is plain HTTP inside the installation network:
 //   GET /health       -> 2xx once the service is ready (the agent waits for it)
 //   GET /api/records  -> the JSON the bundle's data source reads
+// Values of deployment.settings arrive as environment variables, for example
+// process.env.UPSTREAM_API_TOKEN. Never log them.
 import http from 'node:http';
 
 const port = Number(process.env.PORT ?? 8080);

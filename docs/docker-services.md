@@ -9,15 +9,18 @@ language. The bundle stays thin and calls the service over HTTP.
 2. Core downloads the artifact from the catalog and verifies the catalog
    signature, the digests and the archive contents before running anything.
 3. Core asks the installation agent to deploy the container. The agent pulls
-   `deployment.image` by digest, starts it in the installation's internal
-   network with `deployment.env`, and polls `deployment.health_path` until it
-   answers 2xx.
+   `deployment.image` by digest (with the installation's registry login, if
+   the operator configured one), starts it in the installation's internal
+   network with `deployment.env` and the values of `deployment.settings`, and
+   polls `deployment.health_path` until it answers 2xx.
 4. The agent returns the container address. Core passes it to the bundle as
    `intera_service_url` and restarts to load the bundle.
 
 On update the agent starts the new container next to the old one and switches
 only when the new one is healthy; otherwise the old one keeps running. On
-removal the container is stopped and deleted.
+removal the container is stopped and deleted. When the administrator changes
+the container settings, the container is redeployed the same way; Core is not
+restarted.
 
 ## Requirements for the image
 
@@ -30,7 +33,7 @@ removal the container is stopped and deleted.
 | Log to stdout/stderr, never log secrets | Logs are how failures are diagnosed |
 | Multi-stage build, small runtime base image | Smaller attack surface and faster pulls |
 | Build for `linux/amd64` and `linux/arm64` | Installations run on both; the release workflow does this |
-| Pullable without credentials | Private registries are coming in the next platform release |
+| Public image preferred | Any installation can pull it; a private registry needs a login configured by each installation's operator (below) |
 
 The port is not published outside the installation network and the container
 is started with resource limits and `no-new-privileges`. It can reach the
@@ -49,11 +52,74 @@ internet if your service needs to call an upstream API.
 
 - `deployment.env` is for **public, fixed** values (log level, port, feature
   switches). The manifest is public and stored in the catalog.
-- Values and secrets set by the administrator (`deployment.settings`) are
-  **coming in the next platform release**. Until then, an integration that
-  needs a secret takes it as a `secret` field of the connection
-  (`configSchema`) and passes it from the bundle to the service per request,
-  for example in a header.
+- `deployment.settings` is for values the administrator of the installation
+  sets: an upstream API key, a region, a timeout. They are declared in the
+  manifest ([reference](manifest-reference.md#deploymentsettings)) and reach
+  the container as environment variables. Secrets (`kind: secret`) are stored
+  encrypted by the installation and never shown by its API.
+- Read settings at startup and fail with a clear message if a required one is
+  missing. When the administrator changes a value, the agent starts a new
+  container with it; the old one runs until the new one is healthy.
+- A secret the **bundle** needs (not the service) stays a `secret` field of
+  the connection (`configSchema`).
+
+```yaml
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/billing@sha256:<64 hex>
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: api_token
+      label: API token
+      kind: secret
+      required: true
+      env: BILLING__APITOKEN
+    - { name: region, label: Region, kind: string, default: 'eu' }
+```
+
+### Reading settings in .NET
+
+ASP.NET Core reads environment variables into configuration, and `__` in a
+variable name is a section separator, so `BILLING__APITOKEN` is
+`Billing:ApiToken` (keys are case-insensitive):
+
+```csharp
+var builder = WebApplication.CreateSlimBuilder(args);
+
+// BILLING__APITOKEN -> Billing:ApiToken, REGION -> Region
+var apiToken = builder.Configuration["Billing:ApiToken"];
+if (string.IsNullOrEmpty(apiToken))
+{
+    Console.Error.WriteLine("Billing:ApiToken (BILLING__APITOKEN) is not set");
+    return 1;
+}
+var region = builder.Configuration["Region"] ?? "eu";
+
+var app = builder.Build();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/api/region", () => Results.Ok(new { region })); // never return the token
+app.Run();
+return 0;
+```
+
+A plain `Environment.GetEnvironmentVariable("REGION")` works too. In Node.js
+it is `process.env.REGION`, in Python `os.environ["REGION"]`.
+
+## Private registries
+
+The image may be in a registry that needs credentials (ghcr.io with a token,
+GitLab, Harbor). The credentials belong to the installation: its operator sets
+them on the installation agent (`INTEGRATION_AGENT_REGISTRY_AUTH`). Never put
+them in the manifest, the repository or the catalog. If the registry refuses
+the pull, the installation or update stops with
+`INTEGRATION_AGENT_IMAGE_PULL_DENIED`; on an update the previous version keeps
+running.
+
+For integrations in the public catalog a public image is simpler: every
+installation can pull it without extra setup.
 
 ## Example
 

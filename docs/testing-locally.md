@@ -30,6 +30,12 @@ curl -i localhost:8080/health
 docker logs <integration>
 ```
 
+If the manifest declares `deployment.settings`, pass them as the agent would,
+one `-e` per variable, with fake values:
+`docker run ... -e BILLING__APITOKEN=fake-token -e REGION=eu <integration>:dev`.
+`scripts/smoke-service.mjs` (used by CI) passes each setting's `default`, or a
+fake value when there is none.
+
 Check that the container runs as a non-root user:
 `docker exec <integration> id`.
 
@@ -72,6 +78,10 @@ scripts/pack.sh integrations/<developer>/<integration> --image <registry>/<integ
 (`<registry>/<integration>@sha256:...`). The manifest in the repository is not
 changed; use `scripts/set-image-digest.sh <manifest.yaml> <image>` to change a
 file in place.
+
+To get the plugin folder for `intera-library pack` / `publish` instead of an
+archive, add `--stage-dir <empty-dir>`: it gets `manifest.yaml` (with the
+digest from `--image`) and `dist/`. See [Publishing](publishing.md).
 
 ## 5. Full check, as CI does
 

@@ -20,11 +20,18 @@ reviewers enforce the rest. To report a vulnerability, see
 - `manifest.yaml` is public and stored in the catalog forever. Never put
   secrets in `deployment.env` or any other field. The validator rejects
   `env` names that look like secrets (`*_TOKEN`, `*_PASSWORD`, `*API_KEY*`,
-  ...), but you are responsible for the values.
-- Secrets an integration needs are `secret` fields of the connection
+  ...) and warns about such settings that are not `kind: secret`, but you are
+  responsible for the values.
+- Secrets the bundle needs are `secret` fields of the connection
   (`configSchema`). Core stores them encrypted and passes them to the bundle
-  only when it calls it. Administrator-set container secrets
-  (`deployment.settings`) are coming in the next platform release.
+  only when it calls it.
+- Secrets the service needs are `deployment.settings` with `kind: secret`.
+  The manifest declares only the name; the administrator of the installation
+  sets the value, which is stored encrypted and reaches the container as an
+  environment variable. A secret setting has no `default`.
+- Registry credentials for private images belong to the operator of each
+  installation (its installation agent), never to the manifest or this
+  repository.
 - No credentials in source, tests, fixtures, Dockerfiles, build arguments or
   image layers. Tests use obviously fake values.
 - Never log secrets, full request headers or raw upstream responses, and do
