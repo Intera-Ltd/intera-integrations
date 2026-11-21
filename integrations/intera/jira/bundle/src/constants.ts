@@ -1,0 +1,19 @@
+export const INTEGRATION_ID = 'intera-jira-integration';
+export const INTEGRATION_NAME = 'Jira';
+export const INTEGRATION_VERSION = '3.2.0';
+
+export const DIRECT_API_KIND = 'direct_api';
+export const DATA_SOURCE_CAPABILITY = 'datasource';
+export const DEFAULT_CACHE_TTL_SEC = 300;
+
+export const INTERA_SERVICE_URL_CONFIG_FIELD = 'intera_service_url';
+export const API_BASE_URL_CONFIG_FIELD = 'apiBaseUrl';
+export const ACCESS_TOKEN_CONFIG_FIELD = 'accessToken';
+export const SITE_URL_CONFIG_FIELD = 'siteUrl';
+export const JQL_SCOPE_CONFIG_FIELD = 'jqlScope';
+
+export const SITE_HEADER = 'X-Jira-Site';
+export const JQL_SCOPE_HEADER = 'X-Jira-Jql-Scope';
+export const DEFAULT_REQUEST_TIMEOUT_MS = 300_000;
+export const TOTAL_COUNT_HEADER = 'X-Total-Count';
+export const SOURCE_ID_PREFIX = 'jira_';

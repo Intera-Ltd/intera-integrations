@@ -163,6 +163,8 @@ integrations/<developer>/<integration>/   one folder per integration
 templates/
   bundle-only/                            bundle that calls an external API
   bundle-with-service/                    bundle + container service
+shared/
+  dotnet/Intera.Common/                   shared .NET 10 library (HTTP, OAuth, Query DSL, controllers)
 docs/                                     guides and references
 scripts/
   validate-manifest.mjs                   manifest and layout pre-check (CI runs it)
@@ -375,7 +377,15 @@ see [Licensing](CONTRIBUTING.md#licensing).
 
 | Integration | Developer | Shape | Description |
 | --- | --- | --- | --- |
+| [Asana](integrations/intera/asana/) | `intera` | bundle-only | Workspaces, projects, tasks, subtasks, custom fields, time tracking, portfolios, and goals |
+| [GitHub](integrations/intera/github/) | `intera` | bundle-only | Repositories, Actions workflows/runs, deployments, commits, pull requests, issues, and security alerts |
 | [Hello .NET](integrations/intera/hello-dotnet/) | `intera` | bundle + .NET 8 service | Sample data source served by a .NET container |
+| [Jira](integrations/intera/jira/) | `intera` | bundle + .NET 10 service | Jira Cloud projects, issues, sprints, boards, changelogs, worklogs, comments, and custom fields |
+| [Salesforce](integrations/intera/salesforce/) | `intera` | bundle + .NET 10 service | Accounts, pipeline opportunities, support cases, tasks, events, and customer orders via SOQL |
+| [SanctionsCheck](integrations/intera/sanctions/) | `intera` | bundle-only | EU Consolidated List of Financial Sanctions downloaded daily and queried locally |
+| [Xero](integrations/intera/xero/) | `intera` | bundle + .NET 10 service | Invoices, bills, payments, bank transactions, manual journals, budgets, and financial reports |
+| [Zendesk](integrations/intera/zendesk/) | `intera` | bundle + .NET 10 service | Support tickets, SLA metrics/events, comments, CSAT ratings, groups, users, and organizations |
+| [Zoho Inventory](integrations/intera/zoho-inventory/) | `intera` | bundle + .NET 10 service | Customers, vendors, stock by item/location, orders, receipts, shipments, invoices, and bills |
 
 ## License
 

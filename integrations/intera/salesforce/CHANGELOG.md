@@ -1,0 +1,13 @@
+# Changelog
+
+All notable changes to this integration are documented here. The format
+follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
+version follows [Semantic Versioning](https://semver.org/).
+
+## [3.2.0] - 2026-11-21
+
+### Added
+
+- Integration Contract 2 catalog manifest (`manifest.yaml`), containerized .NET 10 service (`service/Dockerfile`), and `intera_service_url` support.
+- `testConnection` probe and `context.signal` cancellation forwarding.
+- Query Contract 1.5.0 support (`snapEdge` + `offset` relative dates, `FieldRefValue`, `dateDiff` / `now` row formulas, expression filters).

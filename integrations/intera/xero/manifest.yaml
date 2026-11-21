@@ -1,0 +1,58 @@
+# Catalog manifest of the Xero integration.
+# Reference: docs/manifest-reference.md
+id: intera.xero
+name: Xero
+version: '3.2.0'
+runtime_id: intera-xero-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [accounting, billing]
+roles: [financial, telecom, shipmanagement, logistics, manufacturing, marketplaces, farming]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/xero@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: client_id
+      label: Xero App Client ID
+      kind: string
+      required: true
+      env: XERO__CLIENTID
+    - name: client_secret
+      label: Xero App Client Secret
+      kind: secret
+      required: true
+      env: XERO__CLIENTSECRET
+    - name: redirect_uri
+      label: OAuth Redirect URI
+      description: Public HTTPS callback URL registered on the Xero app (e.g. https://xero.example.com/oauth/callback)
+      kind: string
+      required: true
+      env: XERO__REDIRECTURI
+    - name: tenant_id
+      label: Default Xero Tenant ID
+      description: Optional default organisation ID when the grant covers multiple organisations
+      kind: string
+      required: false
+      env: XERO__TENANTID
+    - name: scopes
+      label: OAuth Scopes override
+      description: Optional space- or comma-separated Xero OAuth scopes
+      kind: string
+      required: false
+      env: XERO__SCOPES
+    - name: api_access_token
+      label: Inbound service access token
+      description: Optional shared secret for standalone/external service deployments
+      kind: secret
+      required: false
+      env: XERO__APIACCESSTOKEN

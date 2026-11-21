@@ -1,0 +1,66 @@
+# Catalog manifest of the Zoho Inventory integration.
+# Reference: docs/manifest-reference.md
+id: intera.zoho-inventory
+name: Zoho Inventory
+version: '3.3.0'
+runtime_id: intera-zoho-inventory-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [erp, sales-support, logistics]
+roles: [logistics, manufacturing, marketplaces, financial]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/zoho-inventory@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: data_center
+      label: Zoho Data Center
+      description: Domain suffix of your Zoho organization (com, eu, in, com.au, jp, ca, com.cn, sa)
+      kind: string
+      default: 'com'
+      env: ZOHOINVENTORY__DATACENTER
+    - name: organization_id
+      label: Zoho Organization ID
+      kind: string
+      required: true
+      env: ZOHOINVENTORY__ORGANIZATIONID
+    - name: client_id
+      label: Self Client ID
+      kind: string
+      required: true
+      env: ZOHOINVENTORY__CLIENTID
+    - name: client_secret
+      label: Self Client Secret
+      kind: secret
+      required: true
+      env: ZOHOINVENTORY__CLIENTSECRET
+    - name: refresh_token
+      label: Self Client Refresh Token
+      kind: secret
+      required: true
+      env: ZOHOINVENTORY__REFRESHTOKEN
+    - name: accounts_url
+      label: Zoho Accounts URL override
+      kind: string
+      required: false
+      env: ZOHOINVENTORY__ACCOUNTSURL
+    - name: api_base_url
+      label: Zoho Inventory API URL override
+      kind: string
+      required: false
+      env: ZOHOINVENTORY__APIBASEURL
+    - name: api_access_token
+      label: Inbound service access token
+      description: Optional shared secret for standalone/external service deployments
+      kind: secret
+      required: false
+      env: ZOHOINVENTORY__APIACCESSTOKEN

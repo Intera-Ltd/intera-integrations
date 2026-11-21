@@ -1,0 +1,69 @@
+# Catalog manifest of the Jira integration.
+# Reference: docs/manifest-reference.md
+id: intera.jira
+name: Jira
+version: '3.2.0'
+runtime_id: intera-jira-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [monitoring, customer-support]
+roles: [telecom, logistics, manufacturing, financial, marketplaces]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/jira@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: client_id
+      label: Atlassian OAuth 2.0 (3LO) Client ID
+      kind: string
+      required: true
+      env: JIRA__CLIENTID
+    - name: client_secret
+      label: Atlassian OAuth 2.0 (3LO) Client Secret
+      kind: secret
+      required: true
+      env: JIRA__CLIENTSECRET
+    - name: redirect_uri
+      label: OAuth Callback URL
+      description: Callback URL registered on the Atlassian 3LO app (e.g. https://jira.example.com/oauth/callback)
+      kind: string
+      required: true
+      env: JIRA__REDIRECTURI
+    - name: site_url
+      label: Default Jira Site URL
+      description: Optional default site URL or Cloud ID when the grant covers several sites
+      kind: string
+      required: false
+      env: JIRA__SITEURL
+    - name: jql_scope
+      label: Deployment JQL Scope
+      description: Optional JQL restriction ANDed onto every issue query (e.g. project in (DEV, OPS))
+      kind: string
+      required: false
+      env: JIRA__JQLSCOPE
+    - name: issue_custom_fields
+      label: Issue Custom Fields
+      description: Comma-separated custom field IDs or names (or * for all) exposed on jira_issues
+      kind: string
+      required: false
+      env: JIRA__ISSUECUSTOMFIELDS
+    - name: scopes
+      label: OAuth Scopes override
+      kind: string
+      required: false
+      env: JIRA__SCOPES
+    - name: api_access_token
+      label: Inbound service access token
+      description: Optional shared secret for standalone/external service deployments
+      kind: secret
+      required: false
+      env: JIRA__APIACCESSTOKEN
