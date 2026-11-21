@@ -107,6 +107,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ steps.target.outputs.dir }}/service
+          build-contexts: |
+            intera-common=shared/dotnet/Intera.Common
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.target.outputs.image }}:${{ steps.target.outputs.version }}

@@ -91,6 +91,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.dir }}/service
+          build-contexts: |
+            intera-common=shared/dotnet/Intera.Common
           platforms: linux/amd64
           push: false
           load: true
