@@ -1,0 +1,18 @@
+# Catalog manifest of the SanctionsCheck integration.
+# Reference: docs/manifest-reference.md
+id: intera.sanctions
+name: SanctionsCheck
+version: '1.2.0'
+runtime_id: intera-sanctions-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [external-data]
+roles: [financial, shipmanagement, logistics, marketplaces]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: none
