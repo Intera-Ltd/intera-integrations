@@ -10,11 +10,13 @@
 // Usage: node scripts/smoke-service.mjs <integration-dir> <local-image>
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const require = createRequire(import.meta.url);
 const [dir, image] = process.argv.slice(2);
 if (!dir || !image) {
   console.error('usage: smoke-service.mjs <integration-dir> <local-image>');
@@ -65,8 +67,26 @@ try {
   if (user === '' || /^(root|0)(:|$)/.test(user)) throw new Error('the image runs as root; set a non-root USER');
   console.log(`runs as user ${user}`);
 
-  const result = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'try-bundle.mjs'), dir, '--service-url', baseUrl], { stdio: 'inherit' });
-  if (result.status !== 0) throw new Error('the bundle failed against the running service');
+  const bundleEntry = path.resolve(dir, 'bundle', 'dist', 'index.js');
+  const loaded = require(bundleEntry);
+  const bundle = loaded.default && loaded.default.manifest ? loaded.default : loaded;
+  if (!bundle?.manifest || typeof bundle.manifest.id !== 'string') {
+    throw new Error('bundle/dist/index.js did not export a valid manifest');
+  }
+  console.log(`loaded bundle: ${bundle.manifest.id}@${bundle.manifest.version}`);
+
+  const needsExternalServiceSecrets = (deployment.settings ?? []).some(
+    (s) => s.kind === 'secret' || (s.required === true && s.default === undefined),
+  );
+  const needsConnectionSecrets = (bundle.manifest.configSchema ?? []).some(
+    (f) => f.required === true && f.defaultValue === undefined && f.default === undefined,
+  );
+  if (needsExternalServiceSecrets || needsConnectionSecrets) {
+    console.log('skipping live getData smoke calls: integration requires upstream credentials');
+  } else {
+    const result = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'try-bundle.mjs'), dir, '--service-url', baseUrl], { stdio: 'inherit' });
+    if (result.status !== 0) throw new Error('the bundle failed against the running service');
+  }
 } catch (error) {
   console.error(`::error title=${dir}::${error.message}`);
   process.exitCode = 1;

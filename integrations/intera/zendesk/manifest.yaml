@@ -1,0 +1,73 @@
+# Catalog manifest of the Zendesk integration.
+# Reference: docs/manifest-reference.md
+id: intera.zendesk
+name: Zendesk
+version: '4.1.0'
+runtime_id: intera-zendesk-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [customer-support, monitoring]
+roles: [telecom, logistics, manufacturing, financial, marketplaces]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/zendesk@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: subdomain
+      label: Zendesk Subdomain
+      description: Subdomain of your Zendesk account (e.g. acme for https://acme.zendesk.com)
+      kind: string
+      required: true
+      env: ZENDESK__SUBDOMAIN
+    - name: client_id
+      label: Zendesk OAuth Client Unique Identifier
+      kind: string
+      required: true
+      env: ZENDESK__CLIENTID
+    - name: client_secret
+      label: Zendesk OAuth Client Secret
+      kind: secret
+      required: true
+      env: ZENDESK__CLIENTSECRET
+    - name: redirect_uri
+      label: OAuth Redirect URI override
+      description: Leave empty to relay OAuth redirects automatically through INTERA Core's webhook address
+      kind: string
+      required: false
+      env: ZENDESK__REDIRECTURI
+    - name: base_url
+      label: Zendesk Base URL override
+      kind: string
+      required: false
+      env: ZENDESK__BASEURL
+    - name: ticket_custom_fields
+      label: Ticket Custom Fields
+      description: Comma-separated custom field IDs or titles (or * for all) exposed on zendesk_tickets
+      kind: string
+      required: false
+      env: ZENDESK__TICKETCUSTOMFIELDS
+    - name: use_incremental_export
+      label: Use Incremental Export API
+      kind: boolean
+      default: false
+      env: ZENDESK__USEINCREMENTALEXPORT
+    - name: scopes
+      label: OAuth Scopes
+      kind: string
+      default: 'read'
+      env: ZENDESK__SCOPES
+    - name: api_access_token
+      label: Inbound service access token
+      description: Optional shared secret for standalone/external service deployments
+      kind: secret
+      required: false
+      env: ZENDESK__APIACCESSTOKEN

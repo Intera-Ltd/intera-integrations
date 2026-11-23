@@ -1,0 +1,18 @@
+# Catalog manifest of the Asana integration.
+# Reference: docs/manifest-reference.md
+id: intera.asana
+name: Asana
+version: '3.2.0'
+runtime_id: intera-asana-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [project-management]
+roles: [telecom, logistics, manufacturing, financial, marketplaces]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: none

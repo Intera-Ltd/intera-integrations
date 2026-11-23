@@ -1,0 +1,57 @@
+# Catalog manifest of the Salesforce integration.
+# Reference: docs/manifest-reference.md
+id: intera.salesforce
+name: Salesforce
+version: '3.2.0'
+runtime_id: intera-salesforce-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.0'
+  integration_contract: 2
+categories: [crm, sales-support]
+roles: [telecom, logistics, manufacturing, financial, marketplaces]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/salesforce@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: login_url
+      label: Salesforce My Domain login URL
+      description: Organization login URL (e.g. https://acme.my.salesforce.com)
+      kind: string
+      required: true
+      env: SALESFORCE__LOGINURL
+    - name: client_id
+      label: Connected App Consumer Key
+      kind: string
+      required: true
+      env: SALESFORCE__CLIENTID
+    - name: client_secret
+      label: Connected App Consumer Secret
+      kind: secret
+      required: true
+      env: SALESFORCE__CLIENTSECRET
+    - name: instance_url
+      label: Salesforce instance URL override
+      description: Optional override for the instance host returned by OAuth
+      kind: string
+      required: false
+      env: SALESFORCE__INSTANCEURL
+    - name: api_version
+      label: Salesforce REST API version
+      kind: string
+      default: 'v67.0'
+      env: SALESFORCE__APIVERSION
+    - name: api_access_token
+      label: Inbound service access token
+      description: Optional shared secret for standalone/external service deployments
+      kind: secret
+      required: false
+      env: SALESFORCE__APIACCESSTOKEN

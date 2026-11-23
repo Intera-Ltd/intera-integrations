@@ -20,7 +20,7 @@ if (!SHA.test(base) || !SHA.test(head)) {
 
 const SLUG = '[a-z0-9]+(?:-[a-z0-9]+)*';
 const FOLDER = new RegExp(`^(integrations/${SLUG}/${SLUG}|templates/${SLUG})/`);
-const SHARED = /^(scripts\/|package(-lock)?\.json$|\.github\/workflows\/)/;
+const SHARED = /^(scripts\/|shared\/|package(-lock)?\.json$|\.github\/workflows\/)/;
 
 const changed = execFileSync('git', ['diff', '--name-only', `${base}...${head}`], { encoding: 'utf8' })
   .split('\n')
