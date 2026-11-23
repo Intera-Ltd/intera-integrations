@@ -9,7 +9,7 @@ developer:
 compatibility:
   intera_min: '0.5.0'
   integration_contract: 2
-categories: [monitoring, customer-support]
+categories: [project-management, customer-support]
 roles: [telecom, logistics, manufacturing, financial, marketplaces]
 capabilities:
   datasources: true
