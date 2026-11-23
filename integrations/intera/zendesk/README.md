@@ -6,7 +6,7 @@ Connects INTERA to Zendesk Support via OAuth 2.0 (relayed automatically through 
 | --- | --- |
 | Catalog id | `intera.zendesk` |
 | Runtime id | `intera-zendesk-integration` |
-| Version | 4.1.0 |
+| Version | 4.1.1 |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
 | Deployment | Docker (`port: 8080`, `health_path: /health`) |

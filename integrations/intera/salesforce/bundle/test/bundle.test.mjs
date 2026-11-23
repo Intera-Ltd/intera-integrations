@@ -37,7 +37,8 @@ const accounts = () => bundle.dataSources.find((s) => s.id === 'salesforce_accou
 describe('salesforce bundle contract', () => {
   it('exports manifest, 6 dataSources, getDataSources, and testConnection', () => {
     assert.equal(bundle.manifest.id, 'intera-salesforce-integration');
-    assert.equal(bundle.manifest.version, '3.2.0');
+    assert.equal(bundle.manifest.version, '3.2.1');
+    assert.equal(bundle.manifest.requires.core, '>=0.5.25');
     assert.equal(bundle.manifest.compatibility.integration_contract, 2);
     assert.equal(bundle.dataSources.length, 6);
     assert.deepEqual(bundle.getDataSources(), bundle.dataSources);

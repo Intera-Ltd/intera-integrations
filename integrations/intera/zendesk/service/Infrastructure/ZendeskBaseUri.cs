@@ -1,3 +1,4 @@
+using Intera.Common.Infrastructure.Http;
 using Intera.Zendesk.Api.Options;
 using System.Text.RegularExpressions;
 
@@ -16,13 +17,8 @@ public static partial class ZendeskBaseUri
 
         if (!string.IsNullOrWhiteSpace(options.BaseUrl))
         {
-            if (!Uri.TryCreate(options.BaseUrl.Trim().TrimEnd('/') + "/", UriKind.Absolute, out var explicitUri)
-                || (explicitUri.Scheme != Uri.UriSchemeHttps && !(explicitUri.Scheme == Uri.UriSchemeHttp && explicitUri.IsLoopback)))
-            {
-                throw new InvalidOperationException("Zendesk:BaseUrl must be an https:// URL (http:// only for a local host), because it receives the OAuth credentials.");
-            }
-
-            return explicitUri;
+            var validated = HttpsUriValidator.RequireHttpsOrLoopback(options.BaseUrl, "Zendesk:BaseUrl");
+            return new Uri(validated.AbsoluteUri.TrimEnd('/') + "/");
         }
 
         var subdomain = options.Subdomain.Trim();

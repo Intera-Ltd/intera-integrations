@@ -1,3 +1,7 @@
+using Intera.Common.Authentication;
+using Intera.Common.Controllers;
+using Intera.Common.Swagger;
+using Intera.ZohoInventory.Api.Infrastructure;
 using Intera.ZohoInventory.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,10 +21,19 @@ namespace Intera.ZohoInventory.Api.Controllers;
 public sealed class ZohoOAuthController(IZohoOAuthService oauthService) : ControllerBase
 {
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
+    [RequireAccessToken]
+    [SwaggerManualToken]
+    public async Task<IActionResult> RefreshAsync(CancellationToken cancellationToken)
     {
-        await oauthService.RefreshAsync(cancellationToken).ConfigureAwait(false);
-        return Ok(new { status = "refreshed" });
+        try
+        {
+            await oauthService.RefreshAsync(cancellationToken).ConfigureAwait(false);
+            return Ok(ApiResponse<object>.Success(new { status = "refreshed" }));
+        }
+        catch (ZohoAuthenticationException exception)
+        {
+            return Unauthorized(ApiResponse<object?>.Fail(exception.Message));
+        }
     }
 
     [HttpGet("status")]

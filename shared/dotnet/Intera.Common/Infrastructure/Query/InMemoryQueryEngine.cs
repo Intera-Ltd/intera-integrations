@@ -10,11 +10,13 @@ namespace Intera.Common.Infrastructure.Query;
 /// </summary>
 public sealed class InMemoryQueryEngine(IReadOnlyDictionary<string, InMemoryQueryField> fields)
 {
+    public const int DefaultMaxRows = 10_000;
+
     private const int MaxExpressions = 100;
     private const int MaxFilterDepth = 16;
     private const int MaxFilterItems = 200;
     private const int MaxInValues = 1000;
-    private const int MaxTop = 10000;
+    private const int MaxTop = DefaultMaxRows;
     private const int MaxOrderItems = 20;
 
     private int filterItemCount;
@@ -56,7 +58,7 @@ public sealed class InMemoryQueryEngine(IReadOnlyDictionary<string, InMemoryQuer
         QueryRequest? query)
     {
         var paged = query?.Skip is not null ? rows.Skip(query.Skip.Value) : rows;
-        return query?.Top is not null ? paged.Take(query.Top.Value) : paged;
+        return paged.Take(query?.Top ?? DefaultMaxRows);
     }
 
     public IReadOnlyList<IReadOnlyDictionary<string, object?>> Execute(

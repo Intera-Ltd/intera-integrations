@@ -11,7 +11,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInteraApi("Intera.ZohoInventory.Api");
 
-builder.Services.Configure<ZohoInventoryOptions>(builder.Configuration.GetSection(ZohoInventoryOptions.SectionName));
+builder.Services
+    .AddOptions<ZohoInventoryOptions>()
+    .Bind(builder.Configuration.GetSection(ZohoInventoryOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<ZohoInventoryOptions>, ZohoInventoryOptionsValidator>();
 
 builder.Services.AddHttpClient<IJsonHttpClient, JsonHttpClient>((serviceProvider, httpClient) =>
 {

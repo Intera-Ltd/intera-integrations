@@ -37,7 +37,8 @@ const customers = () => bundle.dataSources.find((s) => s.id === 'zoho_inventory_
 describe('zoho-inventory bundle contract', () => {
   it('exports manifest, 22 dataSources, getDataSources, provisionInstance, and testConnection', () => {
     assert.equal(bundle.manifest.id, 'intera-zoho-inventory-integration');
-    assert.equal(bundle.manifest.version, '3.3.0');
+    assert.equal(bundle.manifest.version, '3.3.1');
+    assert.equal(bundle.manifest.requires.core, '>=0.5.25');
     assert.equal(bundle.manifest.compatibility.integration_contract, 2);
     assert.equal(bundle.dataSources.length, 22);
     assert.deepEqual(bundle.getDataSources(), bundle.dataSources);

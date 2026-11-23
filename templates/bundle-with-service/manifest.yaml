@@ -17,7 +17,7 @@ license: Apache-2.0               # repository default; for another license add 
 deployment:
   type: docker
   # Keep the placeholder: the release workflow writes the real digest.
-  image: ghcr.io/intera-ltd/your-integration@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  image: ghcr.io/intera-ltd/your-org/your-integration@sha256:0000000000000000000000000000000000000000000000000000000000000000
   port: 8080
   health_path: /health
   # Fixed, public variables of the container (never secrets):

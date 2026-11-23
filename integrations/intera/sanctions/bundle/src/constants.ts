@@ -1,6 +1,6 @@
 export const INTEGRATION_ID = 'intera-sanctions-integration';
 export const INTEGRATION_NAME = 'SanctionsCheck';
-export const INTEGRATION_VERSION = '1.2.0';
+export const INTEGRATION_VERSION = '1.2.1';
 
 export const DIRECT_API_KIND = 'readonly_api' as const;
 export const DATA_SOURCE_CAPABILITY = 'datasource';
@@ -56,6 +56,12 @@ export const LIST_MAX_STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** The EU file is ~25 MB and arrives in a few seconds; this is the ceiling. */
 export const DOWNLOAD_TIMEOUT_MS = 120_000;
+
+/** Maximum response size accepted when downloading a sanctions export (64 MiB). */
+export const MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024;
+
+/** Maximum distinct list URLs retained in the in-process list cache. */
+export const MAX_LIST_CACHE_ENTRIES = 16;
 
 /** Separator of multi-valued text columns (birth dates, citizenships, …). */
 export const MULTI_VALUE_SEPARATOR = '; ';

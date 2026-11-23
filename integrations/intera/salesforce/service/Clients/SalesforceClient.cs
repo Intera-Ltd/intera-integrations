@@ -149,8 +149,8 @@ public sealed class SalesforceClient(
     /// can be a different one.
     /// </summary>
     private static string CombineInstanceUrl(string instanceUrl, string relativeUrl) =>
-        relativeUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? relativeUrl
+        relativeUrl.Contains("://", StringComparison.Ordinal) || relativeUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase)
+            ? HttpsUriValidator.RequireHttpsOrLoopback(relativeUrl, "Salesforce nextRecordsUrl").AbsoluteUri
             : $"{instanceUrl.TrimEnd('/')}/{relativeUrl.TrimStart('/')}";
 
     private string ResolveApiVersion()

@@ -16,7 +16,7 @@ export const manifest: IIntegrationManifest = {
   id: INTEGRATION_ID,
   name: INTEGRATION_NAME,
   version: INTEGRATION_VERSION,
-  requires: { core: '>=0.5.0' },
+  requires: { core: '>=0.5.25' },
   compatibility: { integration_contract: 2 },
   kind: DIRECT_API_KIND,
   capabilities: [DATA_SOURCE_CAPABILITY, WEBHOOK_CAPABILITY],

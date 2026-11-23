@@ -1,17 +1,20 @@
 using Intera.Common.Authentication;
 using Intera.Common.Controllers;
+using Intera.Common.Infrastructure.OAuth;
 using Intera.Common.Swagger;
 using Intera.Xero.Api.Infrastructure;
 using Intera.Xero.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using System.Text.Json.Serialization;
 
 namespace Intera.Xero.Api.Controllers;
 
 /// <summary>
 /// Connecting this deployment to Xero: <c>GET /oauth/authorize-url</c> (authenticated) hands out a single-use link to
-/// Xero's consent page, Xero redirects back to <c>GET /oauth/callback</c>, and the grant is stored and refreshed from
-/// then on. <c>GET /oauth/status</c> is unauthenticated so health/status tooling can read it.
+/// Xero's consent page, Xero redirects back to <c>GET /oauth/callback</c> — through INTERA's webhook relay, whose
+/// address the plugin registers with <c>PUT /oauth/redirect-uri</c> — and the grant is stored and refreshed from
+/// then on. <c>GET /oauth/status</c> is unauthenticated so connection checks can read it.
 /// </summary>
 /// <remarks>
 /// There is no unauthenticated <c>/oauth/login</c>: whoever starts the flow decides which
@@ -26,11 +29,34 @@ public sealed class OAuthController(XeroTokenService tokens) : ControllerBase
     [HttpGet("authorize-url")]
     [RequireAccessToken]
     [SwaggerManualToken]
-    public ActionResult<ApiResponse<object>> GetAuthorizeUrl()
+    public async Task<ActionResult<ApiResponse<object>>> GetAuthorizeUrlAsync(CancellationToken cancellationToken)
     {
         try
         {
-            return Ok(ApiResponse<object>.Success(new { url = tokens.BuildAuthorizationUrl() }));
+            var url = await tokens.BuildAuthorizationUrlAsync(cancellationToken).ConfigureAwait(false);
+            return Ok(ApiResponse<object>.Success(new { url }));
+        }
+        catch (Exception exception) when (XeroControllerBase.Map(this, exception) is { } result)
+        {
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// INTERA's callback address for this deployment — the public webhook URL Core gives the plugin's <c>oauth-callback</c>
+    /// handler, sent by <c>registerWebhook</c> whenever the instance is saved. 409 when <c>Xero:RedirectUri</c> differs.
+    /// </summary>
+    [HttpPut("redirect-uri")]
+    [RequireAccessToken]
+    [SwaggerManualToken]
+    public async Task<ActionResult<ApiResponse<OAuthRedirectUriState>>> RegisterRedirectUriAsync(
+        [FromBody] RedirectUriRegistration? registration,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var state = await tokens.RegisterRedirectUriAsync(registration?.RedirectUri, cancellationToken).ConfigureAwait(false);
+            return Ok(ApiResponse<OAuthRedirectUriState>.Success(state));
         }
         catch (Exception exception) when (XeroControllerBase.Map(this, exception) is { } result)
         {
@@ -57,7 +83,7 @@ public sealed class OAuthController(XeroTokenService tokens) : ControllerBase
             await tokens.ExchangeAuthorizationCodeAsync(code ?? string.Empty, state, cancellationToken).ConfigureAwait(false);
             return Page(HttpStatusCode.OK, "Xero connected", "The grant is stored and will be refreshed automatically. This window can be closed.");
         }
-        catch (Exception exception) when (exception is XeroRequestException or XeroAuthorizationException or XeroUpstreamException or InvalidOperationException or HttpRequestException)
+        catch (Exception exception) when (exception is XeroRequestException or XeroAuthorizationException or XeroUpstreamException or InvalidOperationException or HttpRequestException or TaskCanceledException { InnerException: TimeoutException })
         {
             return Page(HttpStatusCode.BadRequest, "Xero did not connect", exception.Message);
         }
@@ -82,6 +108,8 @@ public sealed class OAuthController(XeroTokenService tokens) : ControllerBase
     [HttpGet("status")]
     public async Task<ActionResult<XeroOAuthStatus>> StatusAsync(CancellationToken cancellationToken) =>
         Ok(await tokens.GetStatusAsync(cancellationToken).ConfigureAwait(false));
+
+    public sealed record RedirectUriRegistration([property: JsonPropertyName("redirect_uri")] string? RedirectUri);
 
     private ContentResult Page(HttpStatusCode status, string title, string message) => new()
     {

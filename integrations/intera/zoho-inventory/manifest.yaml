@@ -2,12 +2,12 @@
 # Reference: docs/manifest-reference.md
 id: intera.zoho-inventory
 name: Zoho Inventory
-version: '3.3.0'
+version: '3.3.1'
 runtime_id: intera-zoho-inventory-integration
 developer:
   id: intera
 compatibility:
-  intera_min: '0.5.0'
+  intera_min: '0.5.25'
   integration_contract: 2
 categories: [erp, sales-support, logistics]
 roles: [logistics, manufacturing, marketplaces, financial]
@@ -16,7 +16,7 @@ capabilities:
 license: Apache-2.0
 deployment:
   type: docker
-  image: ghcr.io/intera-ltd/zoho-inventory@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  image: ghcr.io/intera-ltd/intera/zoho-inventory@sha256:0000000000000000000000000000000000000000000000000000000000000000
   port: 8080
   health_path: /health
   env:

@@ -12,7 +12,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInteraApi("Intera.Zendesk.Api");
 
-builder.Services.Configure<ZendeskOptions>(builder.Configuration.GetSection(ZendeskOptions.SectionName));
+builder.Services
+    .AddOptions<ZendeskOptions>()
+    .Bind(builder.Configuration.GetSection(ZendeskOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<ZendeskOptions>, ZendeskOptionsValidator>();
 
 // One named client; the Singleton client below takes it from the factory per call, so no handler is pinned for the
 // process lifetime.
@@ -31,7 +35,9 @@ builder.Services.AddSingleton<IOAuthTokenStore>(serviceProvider => new FileOAuth
     () => serviceProvider.GetRequiredService<IOptionsMonitor<ZendeskOptions>>().CurrentValue.OAuthTokenFilePath));
 
 // The redirect URL INTERA registers (its webhook address) is kept next to the grant, for the same reason.
-builder.Services.AddSingleton<IZendeskRedirectUriStore, FileZendeskRedirectUriStore>();
+builder.Services.AddSingleton<IOAuthRedirectUriStore>(serviceProvider => new FileOAuthRedirectUriStore(
+    () => serviceProvider.GetRequiredService<IOptionsMonitor<ZendeskOptions>>().CurrentValue.RedirectUriFilePath));
+
 builder.Services.AddSingleton<ZendeskTokenService>();
 builder.Services.AddSingleton<ZendeskResponseCache>();
 builder.Services.AddSingleton<ZendeskClient>();

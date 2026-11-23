@@ -4,6 +4,12 @@ All notable changes to this integration are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 version follows [Semantic Versioning](https://semver.org/).
 
+## [3.3.1] - 2026-11-23
+
+### Changed
+
+- Require inbound access token authentication on `POST /oauth/refresh`, enforce startup configuration and HTTPS validation (`ValidateOnStart`), quiet `HttpClient` info logging, and pin `.NET 10` container base image digests.
+
 ## [3.3.0] - 2026-11-21
 
 ### Added

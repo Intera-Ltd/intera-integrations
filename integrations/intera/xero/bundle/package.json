@@ -1,7 +1,7 @@
 {
   "name": "@intera/intera-xero-integration",
   "private": true,
-  "version": "3.2.0",
+  "version": "3.3.0",
   "scripts": {
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').cpSync('assets','dist/assets',{recursive:true})\"",
     "test": "npm run build && node --test test/*.test.mjs",

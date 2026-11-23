@@ -6,7 +6,7 @@ Connects INTERA directly to the Asana REST API (`https://app.asana.com/api/1.0`)
 | --- | --- |
 | Catalog id | `intera.asana` |
 | Runtime id | `intera-asana-integration` |
-| Version | 3.2.0 |
+| Version | 3.2.1 |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
 | Deployment | Bundle-only (`deployment.type: none`) |

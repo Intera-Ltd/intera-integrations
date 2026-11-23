@@ -1,4 +1,4 @@
-import { describeMissingSignIn, isSignedIn } from './api/connection';
+import { isSignedIn, resolvePendingAuthorization } from './api/connection';
 import { createZendeskClient } from './api/zendesk-client';
 import { parsePluginConfig } from './config';
 import type { ITestConnectionContext, ITestConnectionResult } from './types';
@@ -8,7 +8,7 @@ export async function testConnection(context: ITestConnectionContext): Promise<I
 
   const status = await client.getOAuthStatus();
   if (!isSignedIn(status)) {
-    throw new Error(await describeMissingSignIn(client, status));
+    return resolvePendingAuthorization(client, status, context);
   }
 
   const data = await client.query('/api/Source/groups/query', {
@@ -24,5 +24,5 @@ export async function testConnection(context: ITestConnectionContext): Promise<I
   const account = typeof rows[0]?.zendesk_subdomain === 'string' ? rows[0].zendesk_subdomain : undefined;
   const groups = typeof rows[0]?.groups === 'number' ? ` (${rows[0].groups} groups)` : '';
 
-  return { detail: account ? `Zendesk: ${account}${groups}` : 'Zendesk: connected, no groups visible' };
+  return { status: 'ok', detail: account ? `Zendesk: ${account}${groups}` : 'Zendesk: connected, no groups visible' };
 }

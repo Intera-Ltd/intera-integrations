@@ -111,10 +111,14 @@ export function readEuList(xml: string): ISanctionsList {
   const generatedAt = blankToNull(root.attributes.generationDate);
   const rows: SanctionsRecord[] = [];
   let entityCount = 0;
-  for (const entity of childrenNamed(root, 'sanctionEntity')) {
-    entityCount += 1;
-    readEntity(entity, generatedAt, rows);
+  for (const child of root.children) {
+    if (child.name === 'sanctionEntity') {
+      entityCount += 1;
+      readEntity(child, generatedAt, rows);
+      child.children.length = 0;
+    }
   }
+  root.children.length = 0;
   return { rows, entityCount, generatedAt };
 }
 
@@ -179,7 +183,7 @@ function readEntity(
       ...shared,
       name_id: blankToNull(alias.attributes.logicalId),
       name,
-      name_normalized: name === null ? null : normalizeName(name),
+      name_normalized: name === null ? null : detachString(normalizeName(name)),
       first_name: blankToNull(alias.attributes.firstName),
       middle_name: blankToNull(alias.attributes.middleName),
       last_name: blankToNull(alias.attributes.lastName),
@@ -267,16 +271,24 @@ function joinValues(values: Array<string | undefined>): string | null {
       seen.add(trimmed);
     }
   }
-  return seen.size > 0 ? [...seen].join(MULTI_VALUE_SEPARATOR) : null;
+  return seen.size > 0 ? detachString([...seen].join(MULTI_VALUE_SEPARATOR)) : null;
 }
 
 function blankToNull(value: string | undefined): string | null {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
+  return trimmed ? detachString(trimmed) : null;
 }
 
 function parseFlag(value: string | undefined): boolean | null {
   if (value === 'true') return true;
   if (value === 'false') return false;
   return null;
+}
+
+/**
+ * Allocates an independent V8 string so substrings sliced out of the 25 MB XML
+ * source cannot retain the entire XML buffer via SlicedString parent pointers.
+ */
+function detachString(value: string): string {
+  return value.length === 0 ? '' : Buffer.from(value, 'utf8').toString('utf8');
 }

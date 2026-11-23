@@ -17,8 +17,8 @@ jobs:
     name: Manifests (all)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -29,16 +29,30 @@ jobs:
       - name: Check every manifest.yaml and the repository layout
         run: node scripts/validate-manifest.mjs --all
 
+  dotnet-tests:
+    name: .NET service unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run .NET unit tests
+        run: |
+          if [ -f shared/dotnet/Intera.Integrations.Tests/Intera.Integrations.Tests.csproj ]; then
+            dotnet test shared/dotnet/Intera.Integrations.Tests/Intera.Integrations.Tests.csproj -c Release --nologo
+          fi
+
   detect:
     name: Changed integrations
     runs-on: ubuntu-latest
     outputs:
       dirs: ${{ steps.changed.outputs.dirs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - id: changed
@@ -62,8 +76,8 @@ jobs:
     env:
       DIR: ${{ matrix.dir }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Repository tooling
@@ -83,12 +97,12 @@ jobs:
         run: |
           if [ -f "$DIR/service/Dockerfile" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
         if: steps.service.outputs.present == 'true'
 
       - name: Service image (not pushed)
         if: steps.service.outputs.present == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ${{ matrix.dir }}/service
           build-contexts: |
@@ -109,7 +123,7 @@ jobs:
           tar -tzf "$archive"
           echo "name=artifact-$(echo "$DIR" | tr / -)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.pack.outputs.name }}
           path: out/*.tar.gz

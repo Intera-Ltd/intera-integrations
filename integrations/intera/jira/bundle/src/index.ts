@@ -2,6 +2,7 @@ declare const module: { exports: unknown };
 import { jiraDataQueryExecutors } from './data-sources/jira-data-query-executors.source';
 import { jiraDataSources } from './data-sources/jira-data-sources.source';
 import { manifest } from './manifest';
+import { onWebhook, registerWebhook } from './oauth-callback';
 import { provisionInstance } from './provisioning';
 import { testConnection } from './test-connection';
 
@@ -12,4 +13,6 @@ module.exports = {
   kpiDataProviders: jiraDataQueryExecutors,
   provisionInstance,
   testConnection,
+  registerWebhook,
+  onWebhook,
 };

@@ -1,0 +1,46 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/hello-dotnet/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/jira/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/salesforce/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/xero/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/zendesk/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/zoho-inventory/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: nuget
+    directory: /shared/dotnet/Intera.Common
+    schedule:
+      interval: weekly

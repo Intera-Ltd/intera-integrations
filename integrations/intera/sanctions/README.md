@@ -6,7 +6,7 @@ Downloads official sanctions lists straight from the publisher once per day and 
 | --- | --- |
 | Catalog id | `intera.sanctions` |
 | Runtime id | `intera-sanctions-integration` |
-| Version | 1.2.0 |
+| Version | 1.2.1 |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
 | Deployment | Bundle-only (`deployment.type: none`) |

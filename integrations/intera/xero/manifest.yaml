@@ -2,12 +2,12 @@
 # Reference: docs/manifest-reference.md
 id: intera.xero
 name: Xero
-version: '3.2.0'
+version: '3.3.0'
 runtime_id: intera-xero-integration
 developer:
   id: intera
 compatibility:
-  intera_min: '0.5.0'
+  intera_min: '0.5.25'
   integration_contract: 2
 categories: [accounting, billing]
 roles: [financial, telecom, shipmanagement, logistics, manufacturing, marketplaces, farming]
@@ -16,7 +16,7 @@ capabilities:
 license: Apache-2.0
 deployment:
   type: docker
-  image: ghcr.io/intera-ltd/xero@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  image: ghcr.io/intera-ltd/intera/xero@sha256:0000000000000000000000000000000000000000000000000000000000000000
   port: 8080
   health_path: /health
   env:
@@ -33,10 +33,10 @@ deployment:
       required: true
       env: XERO__CLIENTSECRET
     - name: redirect_uri
-      label: OAuth Redirect URI
-      description: Public HTTPS callback URL registered on the Xero app (e.g. https://xero.example.com/oauth/callback)
+      label: OAuth Redirect URI override
+      description: Leave empty to relay OAuth redirects automatically through INTERA Core's webhook address
       kind: string
-      required: true
+      required: false
       env: XERO__REDIRECTURI
     - name: tenant_id
       label: Default Xero Tenant ID

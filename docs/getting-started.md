@@ -22,9 +22,9 @@ complete example of the second shape with a .NET 8 service.
 
 - **Developer slug** — your organization in the catalog, for example `acme`.
   Lowercase letters, digits and single hyphens.
-- **Integration slug** — for example `billing`. Same rules. It must be unique
-  in this repository, because the image is published as
-  `ghcr.io/intera-ltd/<integration>`.
+- **Integration slug** — for example `billing`. Same rules. Unique within
+  `<developer>`; the image is published as
+  `ghcr.io/intera-ltd/<developer>/<integration>`.
 - **Catalog id** — `<developer>.<integration>`: `acme.billing`.
 - **Runtime id** — the id of the integration inside the bundle, for example
   `acme_billing`. Lowercase letters and digits, words joined by `-` or `_`.

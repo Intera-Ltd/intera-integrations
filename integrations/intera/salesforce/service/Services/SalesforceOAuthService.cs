@@ -121,6 +121,7 @@ public sealed class SalesforceOAuthService(
     private async Task<CachedToken> AcquireAsync(CancellationToken cancellationToken)
     {
         ValidateOptions();
+        var loginUri = HttpsUriValidator.RequireHttpsOrLoopback(Options.LoginUrl, "Salesforce:LoginUrl");
 
         var form = new Dictionary<string, string>
         {
@@ -133,7 +134,7 @@ public sealed class SalesforceOAuthService(
         try
         {
             response = await httpClient.PostFormAsync<SalesforceTokenResponse>(
-                $"{Options.LoginUrl.TrimEnd('/')}/services/oauth2/token",
+                $"{loginUri.AbsoluteUri.TrimEnd('/')}/services/oauth2/token",
                 form,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -168,15 +169,20 @@ public sealed class SalesforceOAuthService(
     {
         if (!string.IsNullOrWhiteSpace(Options.InstanceUrl))
         {
-            return Options.InstanceUrl.TrimEnd('/');
+            return HttpsUriValidator.RequireHttpsOrLoopback(Options.InstanceUrl, "Salesforce:InstanceUrl")
+                .AbsoluteUri.TrimEnd('/');
         }
 
         // Salesforce's documented rule: use the instance_url the token came with. It survives a My
         // Domain rename and a sandbox refresh, both of which would strand a hardcoded host.
-        return !string.IsNullOrWhiteSpace(response.InstanceUrl)
-            ? response.InstanceUrl.TrimEnd('/')
-            : throw new SalesforceAuthenticationException(
+        if (string.IsNullOrWhiteSpace(response.InstanceUrl))
+        {
+            throw new SalesforceAuthenticationException(
                 "Salesforce token response carried no instance_url, and Salesforce:InstanceUrl is not configured.");
+        }
+
+        return HttpsUriValidator.RequireHttpsOrLoopback(response.InstanceUrl, "Salesforce token response instance_url")
+            .AbsoluteUri.TrimEnd('/');
     }
 
     /// <summary>

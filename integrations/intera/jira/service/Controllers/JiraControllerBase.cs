@@ -1,4 +1,5 @@
 using Intera.Common.Controllers;
+using Intera.Common.Infrastructure.OAuth;
 using Intera.Common.Infrastructure.Query;
 using Intera.Common.Models.Query;
 using Intera.Jira.Api.Infrastructure;
@@ -82,6 +83,9 @@ public abstract class JiraControllerBase : ApiControllerBase
 
             case JiraRequestException or ArgumentException:
                 return controller.BadRequest(ApiResponse<object?>.Fail(exception.Message));
+
+            case OAuthRedirectUriConflictException:
+                return controller.Conflict(ApiResponse<object?>.Fail(exception.Message));
 
             case JiraRateLimitException rateLimit:
                 if (rateLimit.RetryAfter is { } wait)

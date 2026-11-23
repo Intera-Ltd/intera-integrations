@@ -1,5 +1,12 @@
-import { DEFAULT_REQUEST_TIMEOUT_MS, JQL_SCOPE_HEADER, SITE_HEADER, TOTAL_COUNT_HEADER } from '../constants';
-import type { IApiEnvelope, IDataPage, IDataQuery, IPluginConfig } from '../types';
+import {
+  CALLBACK_RELAY_TIMEOUT_MS,
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  JQL_SCOPE_HEADER,
+  SITE_HEADER,
+  STATUS_TIMEOUT_MS,
+  TOTAL_COUNT_HEADER,
+} from '../constants';
+import type { IApiEnvelope, IDataPage, IDataQuery, IOAuthStatus, IPluginConfig } from '../types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -45,20 +52,89 @@ export class JiraClient {
   constructor(private readonly config: IPluginConfig) {}
 
   query(apiPath: string, query: IDataQuery, signal?: AbortSignal): Promise<unknown> {
-    return this.send('POST', apiPath, query, signal);
+    return this.send('POST', apiPath, query, DEFAULT_REQUEST_TIMEOUT_MS, signal);
   }
 
-  get(apiPath: string, signal?: AbortSignal): Promise<unknown> {
-    return this.send('GET', apiPath, undefined, signal);
+  get(apiPath: string, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS, signal?: AbortSignal): Promise<unknown> {
+    return this.send('GET', apiPath, undefined, timeoutMs, signal);
+  }
+
+  put(apiPath: string, body: unknown, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS, signal?: AbortSignal): Promise<unknown> {
+    return this.send('PUT', apiPath, body, timeoutMs, signal);
+  }
+
+  async getOAuthStatus(signal?: AbortSignal): Promise<IOAuthStatus> {
+    const path = '/oauth/status';
+    const response = await this.fetchWithTimeout(
+      path,
+      { method: 'GET', headers: { Accept: 'application/json' } },
+      STATUS_TIMEOUT_MS,
+      signal,
+    );
+    const bodyText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(describeFailure(response.status, bodyText, path));
+    }
+
+    const parsed = JSON.parse(bodyText) as unknown;
+    if (!isRecord(parsed) || typeof parsed.has_refresh_token !== 'boolean') {
+      throw new Error(`Jira API returned an unexpected response shape for ${path}`);
+    }
+
+    return parsed as unknown as IOAuthStatus;
+  }
+
+  async relayOAuthCallback(
+    query: URLSearchParams,
+    signal?: AbortSignal,
+  ): Promise<{ status: number; contentType: string; body: string }> {
+    const path = `/oauth/callback?${query.toString()}`;
+    const response = await this.fetchWithTimeout(
+      path,
+      { method: 'GET', headers: { Accept: 'text/html' } },
+      CALLBACK_RELAY_TIMEOUT_MS,
+      signal,
+    );
+
+    return {
+      status: response.status,
+      contentType: response.headers.get('content-type') ?? 'text/html; charset=utf-8',
+      body: await response.text(),
+    };
+  }
+
+  private async fetchWithTimeout(
+    apiPath: string,
+    init: RequestInit,
+    timeoutMs: number,
+    callerSignal?: AbortSignal,
+  ): Promise<Response> {
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const signal = callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal;
+
+    try {
+      return await fetch(buildApiUrl(this.config, apiPath), { ...init, signal });
+    } catch (error) {
+      if (callerSignal?.aborted) {
+        throw callerSignal.reason ?? error;
+      }
+      if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+        throw new Error(`Jira API request timed out after ${timeoutMs} ms for ${apiPath.split('?')[0]}`);
+      }
+
+      throw error;
+    }
   }
 
   private async send(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PUT',
     apiPath: string,
-    body: IDataQuery | undefined,
+    body: unknown,
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
     callerSignal?: AbortSignal,
   ): Promise<unknown> {
-    const timeoutSignal = AbortSignal.timeout(DEFAULT_REQUEST_TIMEOUT_MS);
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
     const signal = callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal;
 
     try {
@@ -109,7 +185,7 @@ export class JiraClient {
         throw callerSignal.reason ?? error;
       }
       if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
-        throw new Error(`Jira API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS} ms for ${apiPath}`);
+        throw new Error(`Jira API request timed out after ${timeoutMs} ms for ${apiPath}`);
       }
 
       throw error;

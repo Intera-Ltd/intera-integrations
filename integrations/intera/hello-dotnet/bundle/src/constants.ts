@@ -2,7 +2,7 @@
 export const INTEGRATION_ID = 'hello_dotnet';
 export const INTEGRATION_NAME = 'Hello .NET';
 /** Must equal `version` in manifest.yaml: Core checks it after install. */
-export const INTEGRATION_VERSION = '1.0.0';
+export const INTEGRATION_VERSION = '1.0.1';
 /** Integration Contract this bundle is written against. */
 export const INTEGRATION_CONTRACT_VERSION = 2;
 export const DEFAULT_CACHE_TTL_SEC = 60;

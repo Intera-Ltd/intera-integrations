@@ -1,6 +1,6 @@
 export const INTEGRATION_ID = 'intera-github-integration';
 export const INTEGRATION_NAME = 'GitHub';
-export const INTEGRATION_VERSION = '3.2.0';
+export const INTEGRATION_VERSION = '3.2.1';
 
 export const DIRECT_API_KIND = 'direct_api' as const;
 export const DATA_SOURCE_CAPABILITY = 'datasource';
@@ -55,12 +55,18 @@ export const MAX_RETRIES = 4;
 export const CACHE_TTL_MS = 120_000;
 export const REFERENCE_CACHE_TTL_MS = 900_000;
 
+/** Maximum entries and estimated UTF-8/JSON bytes retained in the response cache. */
+export const MAX_RESPONSE_CACHE_ENTRIES = 1_000;
+export const MAX_RESPONSE_CACHE_BYTES = 16 * 1024 * 1024;
+
 /**
  * Validators (`ETag`) and bodies kept for conditional requests. A `304 Not Modified` to an authorized request does
  * not count against GitHub's primary rate limit, so a page that did not change since the last read costs nothing;
- * this many pages are remembered per process, the oldest dropped first.
+ * bounded by entry count, TTL, and estimated byte footprint per process.
  */
-export const MAX_CONDITIONAL_ENTRIES = 5_000;
+export const MAX_CONDITIONAL_ENTRIES = 256;
+export const MAX_CONDITIONAL_BYTES = 16 * 1024 * 1024;
+export const CONDITIONAL_CACHE_TTL_MS = 10 * 60_000;
 
 /** Records one listing may produce. Past it a read fails, never truncates. */
 export const MAX_RECORDS_PER_LIST = 50_000;

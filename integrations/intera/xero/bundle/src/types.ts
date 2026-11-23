@@ -11,6 +11,50 @@ export interface IIntegrationManifest {
   iconFile?: string;
   description?: string;
   configSchema?: IIntegrationConfigField[];
+  webhooks?: IIntegrationWebhookManifest[];
+}
+
+export interface IIntegrationWebhookManifest {
+  key: string;
+  methods: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>;
+  registration: 'auto' | 'manual';
+  secretField?: string;
+  invalidatesRegistrationOn?: string[];
+}
+
+export interface IWebhookRequest {
+  method: string;
+  rawQuery: string;
+  headers: Record<string, string | string[] | undefined>;
+  rawBody: Buffer;
+  sourceIp: string;
+  receivedAt: Date;
+}
+
+export interface IWebhookResponse {
+  status: number;
+  headers?: Record<string, string | string[]>;
+  body?: string | Buffer;
+}
+
+export interface IWebhookHandlerContext {
+  config: Record<string, unknown>;
+  handlerKey: string;
+  webhookUrl: string | null;
+}
+
+export interface IWebhookRegistrationContext {
+  config: Record<string, unknown>;
+  handlerKey: string;
+  webhookUrl: string;
+  publicId: string;
+}
+
+export interface IWebhookRegistrationResult {
+  ok: boolean;
+  secret?: string;
+  providerRef?: string;
+  message?: string;
 }
 
 export type TIntegrationTypeCategory =
@@ -256,6 +300,14 @@ export interface IPluginConfig {
   tenantId?: string;
 }
 
+export interface IOAuthStatus {
+  configured: boolean;
+  has_access_token: boolean;
+  has_refresh_token: boolean;
+  redirect_uri: string;
+  redirect_uri_source: string | null;
+}
+
 export interface IApiEnvelope<T> {
   ok: boolean;
   data: T | null;
@@ -266,8 +318,11 @@ export interface ITestConnectionContext {
   config: Record<string, unknown>;
   instanceId: string | null;
   instanceSlug: string | null;
+  webhookUrls?: Array<{ handlerKey: string; url: string | null }>;
 }
 
 export interface ITestConnectionResult {
+  status?: 'ok' | 'needs_authorization';
+  authorizeUrl?: string;
   detail?: string;
 }

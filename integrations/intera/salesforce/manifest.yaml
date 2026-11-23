@@ -2,12 +2,12 @@
 # Reference: docs/manifest-reference.md
 id: intera.salesforce
 name: Salesforce
-version: '3.2.0'
+version: '3.2.1'
 runtime_id: intera-salesforce-integration
 developer:
   id: intera
 compatibility:
-  intera_min: '0.5.0'
+  intera_min: '0.5.25'
   integration_contract: 2
 categories: [crm, sales-support]
 roles: [telecom, logistics, manufacturing, financial, marketplaces]
@@ -16,7 +16,7 @@ capabilities:
 license: Apache-2.0
 deployment:
   type: docker
-  image: ghcr.io/intera-ltd/salesforce@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  image: ghcr.io/intera-ltd/intera/salesforce@sha256:0000000000000000000000000000000000000000000000000000000000000000
   port: 8080
   health_path: /health
   env:

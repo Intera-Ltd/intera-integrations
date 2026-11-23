@@ -2,6 +2,7 @@ import {
   LIST_MAX_STALE_MS,
   LIST_REFRESH_INTERVAL_MS,
   LIST_RETRY_INTERVAL_MS,
+  MAX_LIST_CACHE_ENTRIES,
 } from '../constants';
 import type { SanctionsRecord } from '../types';
 
@@ -16,9 +17,11 @@ export interface ISanctionsList {
 
 interface ICacheEntry {
   list: ISanctionsList | null;
-  loadedAt: number;
+  fetchedAt: number;
   /** Earliest time another download may be attempted after a failure. */
   retryAfter: number;
+  /** Stored failure reason reported during backoff when no usable copy exists. */
+  lastErrorMessage: string | null;
   inFlight: Promise<ISanctionsList> | null;
 }
 
@@ -42,33 +45,53 @@ export async function getList(
 ): Promise<ISanctionsList> {
   let entry = entries.get(url);
   if (entry === undefined) {
-    entry = { list: null, loadedAt: 0, retryAfter: 0, inFlight: null };
+    pruneEntries();
+    entry = {
+      list: null,
+      fetchedAt: 0,
+      retryAfter: 0,
+      lastErrorMessage: null,
+      inFlight: null,
+    };
     entries.set(url, entry);
   }
 
   const now = Date.now();
-  if (entry.list !== null && now - entry.loadedAt < LIST_REFRESH_INTERVAL_MS) {
+  if (entry.list !== null && now - entry.fetchedAt < LIST_REFRESH_INTERVAL_MS) {
     return entry.list;
   }
   if (entry.inFlight !== null) {
-    return entry.list ?? entry.inFlight;
+    if (entry.list !== null && now - entry.fetchedAt <= LIST_MAX_STALE_MS) {
+      return entry.list;
+    }
+    return entry.inFlight;
   }
-  if (entry.list !== null && now < entry.retryAfter) {
-    return entry.list;
+  if (now < entry.retryAfter) {
+    if (entry.list !== null && now - entry.fetchedAt <= LIST_MAX_STALE_MS) {
+      return entry.list;
+    }
+    const retryInSec = Math.max(1, Math.ceil((entry.retryAfter - now) / 1_000));
+    const reason = entry.lastErrorMessage ?? 'Sanctions list download failed';
+    throw new Error(
+      `${reason} (retry backoff active; next attempt in ${retryInSec}s)`,
+    );
   }
 
   const current = entry;
   const refresh = load(url).then(
     (list) => {
       current.list = list;
-      current.loadedAt = Date.now();
+      current.fetchedAt = Date.now();
       current.retryAfter = 0;
+      current.lastErrorMessage = null;
       current.inFlight = null;
       return list;
     },
     (error: unknown) => {
       current.inFlight = null;
       current.retryAfter = Date.now() + LIST_RETRY_INTERVAL_MS;
+      current.lastErrorMessage =
+        error instanceof Error ? error.message : String(error);
       throw error;
     },
   );
@@ -79,21 +102,46 @@ export async function getList(
   }
 
   // A copy exists but is due for a refresh. Wait for the new one; if the
-  // download fails, keep serving the old copy for a while rather than blanking
-  // every dashboard over a publisher outage — the rows carry
-  // `list_generated_at`, so the age of the answer stays visible.
+  // download fails, keep serving the old copy only while within
+  // LIST_MAX_STALE_MS rather than answering from a week-old sanctions list.
   const stale = current.list;
   try {
     return await refresh;
   } catch (error) {
-    if (Date.now() - current.loadedAt > LIST_MAX_STALE_MS) {
+    if (Date.now() - current.fetchedAt > LIST_MAX_STALE_MS) {
       throw error;
     }
     const reason = error instanceof Error ? error.message : String(error);
     console.warn(
       `[sanctions] refreshing ${new URL(url).host} failed, serving the copy ` +
-        `downloaded ${new Date(current.loadedAt).toISOString()}: ${reason}`,
+        `downloaded ${new Date(current.fetchedAt).toISOString()}: ${reason}`,
     );
     return stale;
+  }
+}
+
+export function clearListCache(): void {
+  entries.clear();
+}
+
+function pruneEntries(): void {
+  if (entries.size < MAX_LIST_CACHE_ENTRIES) {
+    return;
+  }
+  for (const [key, entry] of entries) {
+    if (entry.inFlight === null && entry.list === null) {
+      entries.delete(key);
+      if (entries.size < MAX_LIST_CACHE_ENTRIES) {
+        return;
+      }
+    }
+  }
+  for (const [key, entry] of entries) {
+    if (entry.inFlight === null) {
+      entries.delete(key);
+      if (entries.size < MAX_LIST_CACHE_ENTRIES) {
+        return;
+      }
+    }
   }
 }

@@ -1,5 +1,6 @@
 using Intera.Common.Authentication;
 using Intera.Common.Controllers;
+using Intera.Common.Infrastructure.OAuth;
 using Intera.Common.Swagger;
 using Intera.Zendesk.Api.Infrastructure;
 using Intera.Zendesk.Api.Services;
@@ -50,14 +51,14 @@ public sealed class OAuthController(ZendeskTokenService tokens) : ControllerBase
     [HttpPut("redirect-uri")]
     [RequireAccessToken]
     [SwaggerManualToken]
-    public async Task<ActionResult<ApiResponse<ZendeskRedirectUriState>>> RegisterRedirectUriAsync(
+    public async Task<ActionResult<ApiResponse<OAuthRedirectUriState>>> RegisterRedirectUriAsync(
         [FromBody] RedirectUriRegistration? registration,
         CancellationToken cancellationToken)
     {
         try
         {
             var state = await tokens.RegisterRedirectUriAsync(registration?.RedirectUri, cancellationToken).ConfigureAwait(false);
-            return Ok(ApiResponse<ZendeskRedirectUriState>.Success(state));
+            return Ok(ApiResponse<OAuthRedirectUriState>.Success(state));
         }
         catch (Exception exception) when (ZendeskControllerBase.Map(this, exception) is { } result)
         {

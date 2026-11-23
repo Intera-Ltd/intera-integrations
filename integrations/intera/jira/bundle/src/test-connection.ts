@@ -1,11 +1,17 @@
+import { isSignedIn, resolvePendingAuthorization } from './api/connection';
 import { createJiraClient } from './api/jira-client';
 import { parsePluginConfig } from './config';
 import type { ITestConnectionContext, ITestConnectionResult } from './types';
 
 export async function testConnection(context: ITestConnectionContext): Promise<ITestConnectionResult> {
-  const config = parsePluginConfig(context?.config ?? {});
+  const client = createJiraClient(parsePluginConfig(context?.config ?? {}));
 
-  const data = await createJiraClient(config).query('/api/Source/projects/query', {
+  const status = await client.getOAuthStatus();
+  if (!isSignedIn(status)) {
+    return resolvePendingAuthorization(client, status, context);
+  }
+
+  const data = await client.query('/api/Source/projects/query', {
     result: {
       expressions: [
         { alias: 'jira_site_url', expression: { type: 'field', field: 'jira_site_url' } },
@@ -18,5 +24,5 @@ export async function testConnection(context: ITestConnectionContext): Promise<I
   const site = typeof rows[0]?.jira_site_url === 'string' ? rows[0].jira_site_url : undefined;
   const projects = typeof rows[0]?.projects === 'number' ? ` (${rows[0].projects} projects)` : '';
 
-  return { detail: site ? `Jira: ${site}${projects}` : 'Jira: connected, no projects visible' };
+  return { status: 'ok', detail: site ? `Jira: ${site}${projects}` : 'Jira: connected, no projects visible' };
 }

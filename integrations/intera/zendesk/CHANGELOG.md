@@ -4,6 +4,14 @@ All notable changes to this integration are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 version follows [Semantic Versioning](https://semver.org/).
 
+## [4.1.1] - 2026-11-23
+
+### Changed
+
+- Return `{ status: 'needs_authorization', authorizeUrl }` from `testConnection` instead of throwing, auto-registering `oauth-callback` from `context.webhookUrls` when needed (requires Core `>=0.5.25`).
+- Report Marketplace container environment variable names (`ZENDESK__CLIENTID`, `ZENDESK__CLIENTSECRET`, `ZENDESK__REDIRECTURI`) in diagnostics.
+- Add startup configuration and HTTPS validation (`ValidateOnStart`) and pin `.NET 10` container base image digests.
+
 ## [4.1.0] - 2026-11-21
 
 ### Added

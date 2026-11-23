@@ -2,6 +2,7 @@ declare const module: { exports: unknown };
 import { xeroDataQueryExecutors } from './data-sources/xero-data-query-executors.source';
 import { xeroDataSources } from './data-sources/xero-data-sources.source';
 import { manifest } from './manifest';
+import { onWebhook, registerWebhook } from './oauth-callback';
 import { testConnection } from './test-connection';
 
 module.exports = {
@@ -10,4 +11,6 @@ module.exports = {
   getDataSources: () => xeroDataSources,
   kpiDataProviders: xeroDataQueryExecutors,
   testConnection,
+  registerWebhook,
+  onWebhook,
 };

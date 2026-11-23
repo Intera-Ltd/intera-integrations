@@ -319,9 +319,12 @@ export interface ITestConnectionContext {
   config: Record<string, unknown>;
   instanceId: string | null;
   instanceSlug: string | null;
+  webhookUrls?: Array<{ handlerKey: string; url: string | null }>;
 }
 
 export interface ITestConnectionResult {
+  status?: 'ok' | 'needs_authorization';
+  authorizeUrl?: string;
   detail?: string;
 }
 

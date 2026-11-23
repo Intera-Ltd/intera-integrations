@@ -1,6 +1,6 @@
 export const INTEGRATION_ID = 'intera-zendesk-integration';
 export const INTEGRATION_NAME = 'Zendesk';
-export const INTEGRATION_VERSION = '4.1.0';
+export const INTEGRATION_VERSION = '4.1.1';
 
 export const DIRECT_API_KIND = 'direct_api';
 export const DATA_SOURCE_CAPABILITY = 'datasource';

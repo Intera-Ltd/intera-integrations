@@ -1,3 +1,4 @@
+using Intera.Common.Infrastructure.Http;
 using Intera.ZohoInventory.Api.Options;
 
 namespace Intera.ZohoInventory.Api.Infrastructure;
@@ -31,7 +32,7 @@ public static class ZohoDataCenter
         ArgumentNullException.ThrowIfNull(options);
 
         return !string.IsNullOrWhiteSpace(options.AccountsUrl)
-            ? options.AccountsUrl.TrimEnd('/')
+            ? HttpsUriValidator.RequireHttpsOrLoopback(options.AccountsUrl, "ZohoInventory:AccountsUrl").AbsoluteUri.TrimEnd('/')
             : Lookup(options.DataCenter).Accounts;
     }
 
