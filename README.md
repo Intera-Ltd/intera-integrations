@@ -165,6 +165,7 @@ templates/
   bundle-with-service/                    bundle + container service
 shared/
   dotnet/Intera.Common/                   shared .NET 10 library (HTTP, OAuth, Query DSL, controllers)
+  ts/                                     shared TypeScript contract types, relative dates, and query evaluator
 docs/                                     guides and references
 scripts/
   validate-manifest.mjs                   manifest and layout pre-check (CI runs it)

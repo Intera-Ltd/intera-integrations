@@ -1,7 +1,7 @@
 import type { AsanaReader } from '../asana/reader';
 import { MULTI_VALUE_SEPARATOR } from '../constants';
 import type { AsanaRecord, IDataSourceFieldDescriptor, IFieldLookupDeclaration } from '../types';
-import type { IQueryShape } from './query-shape';
+import type { IQueryShape } from '@intera-integrations/shared';
 
 /**
  * One datasource: its columns and how to read its rows from Asana. Filtering, grouping, ordering and paging are the

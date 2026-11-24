@@ -6,8 +6,11 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "outDir": "dist",
-    "rootDir": "src"
+    "noEmit": true,
+    "paths": {
+      "@intera-integrations/shared": ["../../../../shared/ts/index.ts"],
+      "@intera-integrations/shared/*": ["../../../../shared/ts/*"]
+    }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "../../../../shared/ts/**/*.ts"]
 }

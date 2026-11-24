@@ -7,7 +7,7 @@ import {
   TEST_RESULTS_SOURCE_NAME,
 } from '../constants';
 import type { IDataQuery, IDataQueryContext, IDataQueryExecutor } from '../types';
-import { normalizeDataQuery } from './query-normalization';
+import { normalizeDataQuery } from '@intera-integrations/shared';
 import { BUILD_TYPE_FIELDS, TEST_RESULT_FIELDS } from './teamcity-data-sources.source';
 
 function firstRow(data: unknown, name: string): Record<string, unknown> {

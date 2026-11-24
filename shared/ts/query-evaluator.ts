@@ -1,10 +1,12 @@
 /**
- * In-memory evaluation of the INTERA query AST (Contract 1.5.0) — filter
- * (`condition`, `expression`, `group`), field-to-field comparisons, `now`,
- * `dateDiff`, order, paging, and result expressions.
+ * Shared in-memory evaluation of the INTERA query AST (Contract 1.5+) for
+ * bundle-only integrations: filter (`condition`, `expression`, `group`),
+ * half-open calendar/whole-period `relativeDate` windows, field-to-field
+ * comparisons, `now`, `dateDiff`, ordering, grouping, and paging.
  */
 import type {
   AggregateExpression,
+  DataRecord,
   DataSourceFieldType,
   Expression,
   FieldRefValue,
@@ -13,40 +15,131 @@ import type {
   FilterNode,
   IDataSourceFieldDescriptor,
   IDataSourceOrder,
+  IDataSourcePage,
+  IDataSourceParams,
   MathOperator,
   RelativeDateValue,
   ResultExpression,
   RowExpression,
-  SheetRecord,
-} from '../types';
-import { parseDate } from '../sheets/value-types';
+} from './contract-types';
 import { normalizeFilterNode } from './query-shape';
 import {
   computeDateDiff,
+  parseWeekStart,
   resolveNowAnchor,
-  resolveRelativeDate,
+  resolveRelativeDateRange,
+  type IRelativeDateOptions,
 } from './relative-date';
+import { parseDate } from './value-types';
 
 export interface IEvaluationSchema {
   fieldTypes: Map<string, DataSourceFieldType>;
   weekStart: number;
+  timeZone?: string;
   now?: Date;
 }
 
 export function buildEvaluationSchema(
   fields: IDataSourceFieldDescriptor[],
-  weekStart = 1,
+  weekStart: number | string = 1,
   now?: Date,
+  timeZone?: string,
 ): IEvaluationSchema {
   return {
     fieldTypes: new Map(fields.map((field) => [field.name, field.type])),
-    weekStart,
+    weekStart: parseWeekStart(weekStart),
+    ...(timeZone ? { timeZone } : {}),
     ...(now ? { now } : {}),
   };
 }
 
+/**
+ * Waits for a shared/cached upstream read, or stops waiting when Core's
+ * deadline `signal` fires without aborting concurrent readers sharing the cache.
+ */
+export function awaitWithSignal<T>(
+  work: Promise<T>,
+  signal: AbortSignal | undefined,
+): Promise<T> {
+  if (signal === undefined) {
+    return work;
+  }
+  if (signal.aborted) {
+    work.catch(() => undefined);
+    return Promise.reject(signal.reason ?? new Error('Aborted'));
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      work.catch(() => undefined);
+      reject(signal.reason ?? new Error('Aborted'));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    work.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
+/**
+ * Evaluates filtering, grouping/expressions, ordering, and paging over an
+ * in-memory row set, honouring `params.timeZone` and `params.weekStart` when
+ * supplied by Core.
+ */
+export function executeInMemoryQuery(
+  rows: DataRecord[],
+  params: IDataSourceParams,
+  baseSchema: IEvaluationSchema,
+): DataRecord[] | IDataSourcePage {
+  const schema = withQueryParams(baseSchema, params);
+
+  let filtered = rows;
+  if (params.filter) {
+    filtered = filtered.filter((row) =>
+      matchesFilter(row, params.filter, schema),
+    );
+  }
+  if (Array.isArray(params.filters)) {
+    for (const filter of params.filters) {
+      filtered = filtered.filter((row) => matchesFilter(row, filter, schema));
+    }
+  }
+
+  const shaped =
+    Array.isArray(params.expressions) && params.expressions.length > 0
+      ? evaluateExpressions(
+          filtered,
+          params.expressions,
+          schema,
+          params.orderBy,
+          Array.isArray(params.groupBy) ? params.groupBy : undefined,
+        )
+      : applyOrder(filtered, params.orderBy, schema);
+
+  if (typeof params.offset === 'number' && params.offset >= 0) {
+    const limit =
+      typeof params.limit === 'number' && params.limit > 0
+        ? params.limit
+        : undefined;
+    const start = params.offset;
+    const end = limit === undefined ? undefined : start + limit;
+    return { rows: shaped.slice(start, end), total: shaped.length };
+  }
+
+  if (typeof params.limit === 'number' && params.limit > 0) {
+    return shaped.slice(0, params.limit);
+  }
+  return shaped;
+}
+
 export function matchesFilter(
-  record: SheetRecord,
+  record: DataRecord,
   filter: FilterNode | undefined,
   schema: IEvaluationSchema,
 ): boolean {
@@ -79,7 +172,7 @@ export function matchesFilter(
   }
 }
 
-export function applyOrder<T extends SheetRecord>(
+export function applyOrder<T extends DataRecord>(
   records: T[],
   orderBy: IDataSourceOrder[] | undefined,
   schema: IEvaluationSchema,
@@ -109,12 +202,12 @@ export function applyOrder<T extends SheetRecord>(
 }
 
 export function evaluateExpressions(
-  records: SheetRecord[],
+  records: DataRecord[],
   expressions: ResultExpression[],
   schema: IEvaluationSchema,
   orderBy?: IDataSourceOrder[],
   groupBy?: string[],
-): SheetRecord[] {
+): DataRecord[] {
   const withClock = schema.now ? schema : { ...schema, now: new Date() };
   const grouped = expressions.some((entry) =>
     containsAggregate(entry.expression),
@@ -148,7 +241,7 @@ export function evaluateExpressions(
 
 export function evaluateRowExpression(
   expression: RowExpression,
-  record: SheetRecord,
+  record: DataRecord,
   schema: IEvaluationSchema,
 ): unknown {
   switch (expression.type) {
@@ -157,18 +250,29 @@ export function evaluateRowExpression(
     case 'field':
       return record[expression.field] ?? null;
     case 'now':
-      return resolveNowAnchor(expression.anchor ?? 'now', schema.now);
+      return resolveNowAnchor(
+        expression.anchor ?? 'now',
+        schema.now,
+        schema.timeZone,
+      );
     case 'dateDiff': {
       const startMs = toEpoch(
         evaluateRowExpression(expression.start, record, schema),
+        schema.timeZone,
       );
       const endMs = toEpoch(
         evaluateRowExpression(expression.end, record, schema),
+        schema.timeZone,
       );
       if (startMs === null || endMs === null) {
         return null;
       }
-      return computeDateDiff(expression.unit, startMs, endMs, schema.weekStart);
+      return computeDateDiff(
+        expression.unit,
+        startMs,
+        endMs,
+        dateOptions(schema),
+      );
     }
     case 'math':
       return applyMath(
@@ -186,12 +290,41 @@ export function evaluateRowExpression(
 }
 
 interface IRowGroup {
-  key: SheetRecord;
-  rows: SheetRecord[];
+  key: DataRecord;
+  rows: DataRecord[];
+}
+
+function withQueryParams(
+  baseSchema: IEvaluationSchema,
+  params: IDataSourceParams,
+): IEvaluationSchema {
+  const timeZone =
+    typeof params.timeZone === 'string' && params.timeZone.trim().length > 0
+      ? params.timeZone.trim()
+      : baseSchema.timeZone;
+  const weekStart =
+    params.weekStart !== undefined
+      ? parseWeekStart(params.weekStart)
+      : baseSchema.weekStart;
+  const now = baseSchema.now ?? new Date();
+  return {
+    fieldTypes: baseSchema.fieldTypes,
+    weekStart,
+    ...(timeZone ? { timeZone } : {}),
+    now,
+  };
+}
+
+function dateOptions(schema: IEvaluationSchema): IRelativeDateOptions {
+  return {
+    weekStart: schema.weekStart,
+    ...(schema.timeZone ? { timeZone: schema.timeZone } : {}),
+    ...(schema.now ? { now: schema.now } : {}),
+  };
 }
 
 function matchesCondition(
-  record: SheetRecord,
+  record: DataRecord,
   condition: FilterCondition,
   schema: IEvaluationSchema,
 ): boolean {
@@ -217,6 +350,29 @@ function matchesCondition(
       return condition.operator === 'IN' ? found : !found;
     }
     default: {
+      if (isRelativeDate(condition.value)) {
+        const leftEpoch = toEpoch(cellValue, schema.timeZone);
+        if (leftEpoch === null) {
+          return false;
+        }
+        const range = resolveRelativeDateRange(
+          condition.value,
+          dateOptions(schema),
+        );
+        if (range.endExclusive !== null) {
+          return matchesHalfOpenRange(
+            leftEpoch,
+            range.start,
+            range.endExclusive,
+            condition.operator,
+          );
+        }
+        return compareWithOperator(
+          compare(leftEpoch, range.start),
+          condition.operator,
+        );
+      }
+
       const rawRight = isFieldRef(condition.value)
         ? record[condition.value.name]
         : condition.value;
@@ -236,8 +392,32 @@ function matchesCondition(
   }
 }
 
+function matchesHalfOpenRange(
+  epoch: number,
+  start: number,
+  endExclusive: number,
+  operator: string,
+): boolean {
+  switch (operator) {
+    case '=':
+      return epoch >= start && epoch < endExclusive;
+    case '!=':
+      return epoch < start || epoch >= endExclusive;
+    case '<':
+      return epoch < start;
+    case '<=':
+      return epoch < endExclusive;
+    case '>':
+      return epoch >= endExclusive;
+    case '>=':
+      return epoch >= start;
+    default:
+      throw new Error(`Unsupported comparison operator "${operator}"`);
+  }
+}
+
 function matchesExpressionCondition(
-  record: SheetRecord,
+  record: DataRecord,
   condition: FilterExpressionCondition,
   schema: IEvaluationSchema,
 ): boolean {
@@ -286,8 +466,8 @@ function shapeRow(
   group: IRowGroup,
   expressions: ResultExpression[],
   schema: IEvaluationSchema,
-): SheetRecord {
-  const result: SheetRecord = {};
+): DataRecord {
+  const result: DataRecord = {};
   for (const entry of expressions) {
     result[entry.alias] = evaluateExpression(entry.expression, group, schema);
   }
@@ -302,34 +482,41 @@ function evaluateExpression(
   switch (expression.type) {
     case 'value':
       return expression.value;
-
     case 'field':
       return group.key[expression.field] ?? null;
-
     case 'now':
-      return resolveNowAnchor(expression.anchor ?? 'now', schema.now);
-
+      return resolveNowAnchor(
+        expression.anchor ?? 'now',
+        schema.now,
+        schema.timeZone,
+      );
     case 'dateDiff': {
       const startMs = toEpoch(
         evaluateExpression(expression.start, group, schema),
+        schema.timeZone,
       );
-      const endMs = toEpoch(evaluateExpression(expression.end, group, schema));
+      const endMs = toEpoch(
+        evaluateExpression(expression.end, group, schema),
+        schema.timeZone,
+      );
       if (startMs === null || endMs === null) {
         return null;
       }
-      return computeDateDiff(expression.unit, startMs, endMs, schema.weekStart);
+      return computeDateDiff(
+        expression.unit,
+        startMs,
+        endMs,
+        dateOptions(schema),
+      );
     }
-
     case 'aggregate':
       return evaluateAggregate(expression, group, schema);
-
     case 'math':
       return applyMath(
         expression.operator,
         toNumber(evaluateExpression(expression.left, group, schema)),
         toNumber(evaluateExpression(expression.right, group, schema)),
       );
-
     default:
       throw new Error(
         `Unsupported expression type "${String(
@@ -464,21 +651,21 @@ function addGroupKey(keys: string[], field: string): void {
   }
 }
 
-function groupRecords(records: SheetRecord[], keyFields: string[]): IRowGroup[] {
+function groupRecords(records: DataRecord[], keyFields: string[]): IRowGroup[] {
   if (keyFields.length === 0) {
     return [{ key: {}, rows: records }];
   }
 
   const groups = new Map<string, IRowGroup>();
   for (const record of records) {
-    const key: SheetRecord = {};
+    const key: DataRecord = {};
     const parts: string[] = [];
     for (const field of keyFields) {
       const value = record[field] ?? null;
       key[field] = value;
       parts.push(groupKeyPart(value));
     }
-    const keyString = parts.join(' ');
+    const keyString = parts.join('\x1f');
     const group = groups.get(keyString);
     if (group === undefined) {
       groups.set(keyString, { key, rows: [record] });
@@ -492,7 +679,7 @@ function groupRecords(records: SheetRecord[], keyFields: string[]): IRowGroup[] 
 
 function groupKeyPart(value: unknown): string {
   return value === null || value === undefined
-    ? ' null'
+    ? '\x00null'
     : `${typeof value}:${String(value)}`;
 }
 
@@ -503,13 +690,14 @@ function coerceForCompare(
   schema: IEvaluationSchema,
 ): [unknown, unknown] {
   if (isRelativeDate(compareValue)) {
-    return [
-      toEpoch(cellValue),
-      resolveRelativeDate(compareValue, schema.weekStart, schema.now),
-    ];
+    const range = resolveRelativeDateRange(compareValue, dateOptions(schema));
+    return [toEpoch(cellValue, schema.timeZone), range.start];
   }
   if (type === 'date') {
-    return [toEpoch(cellValue), toEpoch(compareValue)];
+    return [
+      toEpoch(cellValue, schema.timeZone),
+      toEpoch(compareValue, schema.timeZone),
+    ];
   }
   if (type === 'number') {
     return [toNumber(cellValue), toNumber(compareValue)];
@@ -524,6 +712,7 @@ function isRelativeDate(value: unknown): value is RelativeDateValue {
   return (
     typeof value === 'object' &&
     value !== null &&
+    !Array.isArray(value) &&
     (value as { type?: unknown }).type === 'relativeDate'
   );
 }
@@ -532,16 +721,17 @@ function isFieldRef(value: unknown): value is FieldRefValue {
   return (
     typeof value === 'object' &&
     value !== null &&
+    !Array.isArray(value) &&
     (value as { type?: unknown }).type === 'field' &&
     typeof (value as { name?: unknown }).name === 'string'
   );
 }
 
-function toEpoch(value: unknown): number | null {
+function toEpoch(value: unknown, timeZone?: string): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (value instanceof Date) return value.getTime();
-  return parseDate(String(value));
+  return parseDate(String(value), timeZone);
 }
 
 function toNumber(value: unknown): number | null {
@@ -595,10 +785,7 @@ function compare(left: unknown, right: unknown): number | null {
   return leftText < rightText ? -1 : leftText > rightText ? 1 : 0;
 }
 
-function compareWithOperator(
-  result: number | null,
-  operator: string,
-): boolean {
+function compareWithOperator(result: number | null, operator: string): boolean {
   if (result === null) {
     return false;
   }
@@ -616,19 +803,19 @@ function compareWithOperator(
     case '>=':
       return result >= 0;
     default:
-      throw new Error(`Unsupported filter operator "${operator}"`);
+      throw new Error(`Unsupported comparison operator "${operator}"`);
   }
 }
 
-function numericValues(operands: readonly unknown[]): number[] {
-  const values: number[] = [];
-  for (const operand of operands) {
-    const value = toNumber(operand);
-    if (value !== null) {
-      values.push(value);
+function numericValues(values: unknown[]): number[] {
+  const numbers: number[] = [];
+  for (const value of values) {
+    const n = toNumber(value);
+    if (n !== null) {
+      numbers.push(n);
     }
   }
-  return values;
+  return numbers;
 }
 
 function applyMath(

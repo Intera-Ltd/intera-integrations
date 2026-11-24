@@ -2,7 +2,7 @@ import { MAX_REVIEW_FETCHES, MULTI_VALUE_SEPARATOR } from '../../constants';
 import type { GitHubApiError, GitHubObject } from '../../github/github-client';
 import { mapLimited } from '../../github/map-limited';
 import { repoPath, type GitHubReader } from '../../github/reader';
-import type { IQueryShape } from '../query-shape';
+import type { IQueryShape } from '@intera-integrations/shared';
 import type { GitHubRecord } from '../../types';
 import {
   before,

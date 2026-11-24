@@ -3,21 +3,18 @@ import { createRequire } from 'node:module';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 const require = createRequire(import.meta.url);
-const bundle = require('../dist/index.js');
+const distBundle = require('../dist/index.js');
 const {
+  bundle,
   createResponseCache,
-} = require('../dist/github/response-cache.js');
-const {
   GitHubClient,
   clearConditionalCache,
   getConditionalCacheStats,
-} = require('../dist/github/github-client.js');
-const {
   CONDITIONAL_CACHE_TTL_MS,
   MAX_CONDITIONAL_BYTES,
   MAX_CONDITIONAL_ENTRIES,
-} = require('../dist/constants.js');
-const { parseGitHubConfig } = require('../dist/config.js');
+  parseGitHubConfig,
+} = require('./dist/harness.cjs');
 
 let calls;
 let respond;
@@ -98,6 +95,9 @@ afterEach(() => {
 
 describe('github bundle contract', () => {
   it('exports manifest, 11 dataSources, getDataSources, and testConnection', () => {
+    assert.deepEqual(distBundle.manifest, bundle.manifest);
+    assert.equal(distBundle.dataSources.length, 11);
+    assert.equal(typeof distBundle.testConnection, 'function');
     assert.equal(bundle.manifest.id, 'intera-github-integration');
     assert.equal(bundle.manifest.version, '3.2.1');
     assert.equal(bundle.manifest.compatibility.integration_contract, 2);
