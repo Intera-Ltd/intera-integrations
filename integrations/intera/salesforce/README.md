@@ -1,17 +1,20 @@
 # Salesforce
 
-Connects INTERA to Salesforce CRM via an OAuth 2.0 client-credentials Connected App / External Client App, compiling filters, ordering, and paging into SOQL in a companion .NET 10 service.
+Connects INTERA to Salesforce CRM via an OAuth 2.0 client-credentials Connected App / External Client App, compiling filters, ordering, and paging into SOQL in a stateless companion .NET 10 service.
 
 | | |
 | --- | --- |
 | Catalog id | `intera.salesforce` |
 | Runtime id | `intera-salesforce-integration` |
-| Version | 3.2.1 |
+| Version | 3.3.0 |
+| INTERA Core | `>=0.5.94` |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
 | Deployment | Docker (`port: 8080`, `health_path: /health`) |
 
 ## Container settings (`deployment.settings`)
+
+INTERA Core automatically provisions `INTERA_SERVICE_TOKEN` for service-to-bundle authentication.
 
 | Name | Env | Kind | Required | Description |
 | --- | --- | --- | --- | --- |
@@ -20,16 +23,10 @@ Connects INTERA to Salesforce CRM via an OAuth 2.0 client-credentials Connected 
 | `client_secret` | `SALESFORCE__CLIENTSECRET` | `secret` | yes | Connected App Consumer Secret |
 | `instance_url` | `SALESFORCE__INSTANCEURL` | `string` | no | Optional Salesforce instance host override |
 | `api_version` | `SALESFORCE__APIVERSION` | `string` | no | REST API version (default: `v67.0`) |
-| `api_access_token` | `SALESFORCE__APIACCESSTOKEN` | `secret` | no | Optional inbound shared secret when exposing the service outside the Marketplace network |
 
 ## Connection configuration (`configSchema`)
 
-When deployed via Marketplace, Core injects `intera_service_url` automatically and both fields below can be left blank.
-
-| Field | Kind | Required | Description |
-| --- | --- | --- | --- |
-| `apiBaseUrl` | `string` | no | Optional service URL override |
-| `accessToken` | `secret` | no | Required only when `SALESFORCE__APIACCESSTOKEN` is configured on the service |
+None (`configSchema: []`). When deployed via Marketplace, Core injects `intera_service_url` and `intera_service_token` automatically.
 
 ## Data sources
 
@@ -47,7 +44,7 @@ cd integrations/intera/salesforce/bundle
 npm ci
 npm test
 cd -
-dotnet build integrations/intera/salesforce/service/Intera.Salesforce.Api.csproj
+dotnet build -c Release integrations/intera/salesforce/service/Intera.Salesforce.Api.csproj
 node scripts/validate-manifest.mjs integrations/intera/salesforce
 ```
 

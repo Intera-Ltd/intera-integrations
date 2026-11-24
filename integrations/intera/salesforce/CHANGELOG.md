@@ -4,6 +4,12 @@ All notable changes to this integration are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 version follows [Semantic Versioning](https://semver.org/).
 
+## [3.3.0] - 2026-11-24
+
+### Changed
+
+- Adopted platform-managed `INTERA_SERVICE_TOKEN` (`intera_service_token`) authentication on every service endpoint except `GET /health`, and removed manual `api_access_token` / `apiBaseUrl` / `accessToken` settings (requires Core `>=0.5.94`).
+
 ## [3.2.1] - 2026-11-23
 
 ### Changed

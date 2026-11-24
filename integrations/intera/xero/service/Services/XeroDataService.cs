@@ -26,7 +26,7 @@ public interface IXeroDataService
 /// <remarks>
 /// <para>
 /// <b>Written against Xero's OpenAPI contract and documentation, not yet against a live organisation</b> — the
-/// project's CLAUDE.md lists what that leaves to confirm on the Demo Company.
+/// project's live verification covers the remaining edge cases on the Demo Company.
 /// </para>
 /// <para>
 /// Every row carries the five metadata fields (<see cref="XeroSources.Metadata"/>); <c>intera_synced_at</c> is when

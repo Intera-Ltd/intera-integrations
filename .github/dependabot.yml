@@ -11,6 +11,16 @@ updates:
       interval: weekly
 
   - package-ecosystem: docker
+    directory: /integrations/intera/business-central/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/eurobank/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
     directory: /integrations/intera/hello-dotnet/service
     schedule:
       interval: weekly
@@ -21,7 +31,27 @@ updates:
       interval: weekly
 
   - package-ecosystem: docker
+    directory: /integrations/intera/revolut/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
     directory: /integrations/intera/salesforce/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/soft1/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/teamcity/service
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /integrations/intera/unleashed/service
     schedule:
       interval: weekly
 

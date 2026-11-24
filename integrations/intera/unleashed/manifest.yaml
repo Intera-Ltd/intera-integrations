@@ -1,0 +1,59 @@
+# Catalog manifest of the Unleashed integration.
+# Reference: docs/manifest-reference.md
+id: intera.unleashed
+name: Unleashed
+version: '3.2.0'
+runtime_id: intera-unleashed-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.94'
+  integration_contract: 2
+categories: [erp, logistics, manufacturing]
+roles: [logistics, manufacturing, marketplaces, financial, b2b]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/intera/unleashed@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: api_id
+      label: Unleashed API ID
+      description: Account API ID sent in the api-auth-id header
+      kind: string
+      required: true
+      env: UNLEASHED__APIID
+    - name: api_key
+      label: Unleashed API Key
+      description: Account API key used to sign outbound requests with HMAC-SHA256
+      kind: secret
+      required: true
+      env: UNLEASHED__APIKEY
+    - name: api_base_url
+      label: Unleashed API base URL
+      kind: string
+      default: 'https://api.unleashedsoftware.com'
+      env: UNLEASHED__APIBASEURL
+    - name: client_type
+      label: Client type header
+      description: Application identifier sent in the client-type header (<partner>/<app>)
+      kind: string
+      default: 'intera/unleashed'
+      env: UNLEASHED__CLIENTTYPE
+    - name: page_size
+      label: Upstream page size
+      description: Records requested per Unleashed API page (1 to 1000)
+      kind: number
+      default: 200
+      env: UNLEASHED__PAGESIZE
+    - name: max_pages
+      label: Max upstream pages per query
+      description: Maximum upstream pages fetched per resource read
+      kind: number
+      default: 20
+      env: UNLEASHED__MAXPAGES

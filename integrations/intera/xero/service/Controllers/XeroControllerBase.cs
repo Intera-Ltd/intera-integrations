@@ -21,7 +21,7 @@ namespace Intera.Xero.Api.Controllers;
 /// <b>The query is run once over no rows before anything is read from Xero</b>, so an unknown field or a malformed
 /// <c>relativeDate</c> is refused without spending Xero's call allowance. The <see cref="ArgumentException"/> catch is
 /// also what turns a bad <c>relativeDate</c> thrown by <c>QueryPushdownExtractor</c> into a 400 rather than a 500 —
-/// see the root CLAUDE.md's sharp edges.
+/// see known upstream API edge cases.
 /// </para>
 /// </remarks>
 public abstract class XeroControllerBase : ApiControllerBase

@@ -73,8 +73,5 @@ public sealed class SalesforceOptions
     /// </remarks>
     public int BatchSize { get; set; } = 2000;
 
-    /// <summary>Fixed shared secret inbound callers must send as X-Access-Token / Bearer.</summary>
-    public string ApiAccessToken { get; set; } = string.Empty;
-
     public int HttpTimeoutSeconds { get; set; } = 100;
 }

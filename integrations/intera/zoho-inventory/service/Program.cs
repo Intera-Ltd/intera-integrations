@@ -1,4 +1,3 @@
-using Intera.Common.Authentication;
 using Intera.Common.Infrastructure.Http;
 using Intera.Common.Infrastructure.Startup;
 using Intera.ZohoInventory.Api.Clients;
@@ -35,10 +34,6 @@ builder.Services.AddScoped<IZohoInventoryClient, ZohoInventoryClient>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<ISchemaService, SchemaService>();
-
-builder.Services.AddSingleton<IAccessTokenStore>(serviceProvider => new StaticAccessTokenStore(
-    () => serviceProvider.GetRequiredService<IOptions<ZohoInventoryOptions>>().Value.ApiAccessToken,
-    "ZohoInventory:ApiAccessToken"));
 
 var app = builder.Build();
 

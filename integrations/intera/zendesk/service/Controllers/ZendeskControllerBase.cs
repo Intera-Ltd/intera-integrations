@@ -21,7 +21,7 @@ namespace Intera.Zendesk.Api.Controllers;
 /// <b>The query is run once over no rows before anything is read from Zendesk</b>, so an unknown field or a malformed
 /// <c>relativeDate</c> is refused without spending Zendesk's quota. The <see cref="ArgumentException"/> catch is also what
 /// turns a bad <c>relativeDate</c> thrown by <c>QueryPushdownExtractor</c> into a 400 rather than a 500 — see the root
-/// CLAUDE.md's sharp edges.
+/// known upstream API edge cases.
 /// </para>
 /// </remarks>
 public abstract class ZendeskControllerBase : ApiControllerBase

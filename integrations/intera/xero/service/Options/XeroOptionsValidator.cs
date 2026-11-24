@@ -27,6 +27,9 @@ public sealed class XeroOptionsValidator : IValidateOptions<XeroOptions>
         ValidateHttpsUrl(options.ApiBaseUrl, "Xero:ApiBaseUrl", failures);
         ValidateHttpsUrl(options.ConnectionsUrl, "Xero:ConnectionsUrl", failures);
 
+        ValidateDataFilePath(options.OAuthTokenFilePath, "Xero:OAuthTokenFilePath", failures);
+        ValidateDataFilePath(options.RedirectUriFilePath, "Xero:RedirectUriFilePath", failures);
+
         if (!string.IsNullOrWhiteSpace(options.RedirectUri))
         {
             try
@@ -49,6 +52,21 @@ public sealed class XeroOptionsValidator : IValidateOptions<XeroOptions>
         if (!HttpsUriValidator.TryValidateHttpsOrLoopback(url, out _, out var reason))
         {
             failures.Add($"{settingName} {reason}");
+        }
+    }
+
+    private static void ValidateDataFilePath(string? path, string settingName, List<string> failures)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            failures.Add($"{settingName} must be configured.");
+            return;
+        }
+
+        var segments = path.Trim().Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Any(segment => string.Equals(segment, "..", StringComparison.Ordinal)))
+        {
+            failures.Add($"{settingName} must not contain '..' path traversal segments.");
         }
     }
 }

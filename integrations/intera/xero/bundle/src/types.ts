@@ -296,7 +296,7 @@ export type IPluginDataSourceId = `xero_${string}`;
 
 export interface IPluginConfig {
   apiBaseUrl: string;
-  accessToken?: string;
+  serviceToken: string;
   tenantId?: string;
 }
 

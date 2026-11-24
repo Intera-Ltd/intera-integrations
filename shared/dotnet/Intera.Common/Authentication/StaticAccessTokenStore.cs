@@ -4,16 +4,12 @@ using System.Text;
 namespace Intera.Common.Authentication;
 
 /// <summary>
-/// Validates inbound <c>X-Access-Token</c>/<c>Bearer</c> values against a fixed secret from configuration.
-/// When the configured secret is blank (Marketplace container deployment over the internal installation
-/// network), <see cref="RequiresToken"/> is <see langword="false"/>; when set (external deployment or
-/// explicit defence-in-depth), every protected endpoint requires a matching token.
+/// Validates inbound <c>Authorization: Bearer &lt;token&gt;</c> values in constant time against
+/// the platform token issued by INTERA Core (<c>INTERA_SERVICE_TOKEN</c>).
 /// </summary>
 public sealed class StaticAccessTokenStore(Func<string?> tokenAccessor, string optionName) : IAccessTokenStore
 {
     private static readonly AccessTokenInfo TokenInfo = new(1);
-
-    public bool RequiresToken => !string.IsNullOrWhiteSpace(tokenAccessor());
 
     public Task<AccessTokenInfo?> TryValidateAsync(string token, CancellationToken cancellationToken)
     {

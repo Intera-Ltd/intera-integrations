@@ -35,7 +35,7 @@ public interface IJiraDataService
 /// <remarks>
 /// <para>
 /// <b>Written against Atlassian's OpenAPI specifications (platform v3 and Agile 1.0, read 2026-10-07) without access to
-/// a live site</b> — the project's CLAUDE.md lists what that leaves to confirm.
+/// a live site</b> — live verification covers the remaining edge cases.
 /// </para>
 /// <para>
 /// Every row carries the five metadata fields (<see cref="JiraSources.Metadata"/>); <c>intera_synced_at</c> is when

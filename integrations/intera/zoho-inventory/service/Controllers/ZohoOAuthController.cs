@@ -18,11 +18,11 @@ namespace Intera.ZohoInventory.Api.Controllers;
 /// </remarks>
 [ApiController]
 [Route("oauth")]
+[RequireAccessToken]
+[SwaggerManualToken]
 public sealed class ZohoOAuthController(IZohoOAuthService oauthService) : ControllerBase
 {
     [HttpPost("refresh")]
-    [RequireAccessToken]
-    [SwaggerManualToken]
     public async Task<IActionResult> RefreshAsync(CancellationToken cancellationToken)
     {
         try

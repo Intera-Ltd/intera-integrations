@@ -11,25 +11,19 @@ using System.Text.Json.Serialization;
 namespace Intera.Zendesk.Api.Controllers;
 
 /// <summary>
-/// Connecting this deployment to Zendesk: <c>GET /oauth/authorize-url</c> (authenticated) hands out a single-use link to
-/// Zendesk's consent page, Zendesk redirects back to <c>GET /oauth/callback</c> — through INTERA's webhook relay, whose
-/// address the plugin registers with <c>PUT /oauth/redirect-uri</c> — and the grant is stored and refreshed from then
-/// on. <c>GET /oauth/status</c> is unauthenticated so the plugin's
-/// connection checks can read it.
+/// Connecting this deployment to Zendesk: <c>GET /oauth/authorize-url</c> hands out a single-use link to Zendesk's
+/// consent page, Zendesk redirects back to <c>GET /oauth/callback</c> — through INTERA's webhook relay, whose address
+/// the plugin registers with <c>PUT /oauth/redirect-uri</c> — and the grant is stored encrypted and refreshed from then
+/// on. Every route here requires <c>Authorization: Bearer &lt;INTERA_SERVICE_TOKEN&gt;</c>.
 /// </summary>
-/// <remarks>
-/// Like Xero and Jira, there is no unauthenticated <c>/oauth/login</c>: whoever starts
-/// the flow decides as which Zendesk user the deployment reads, so starting it takes this API's access token — see
-/// <see cref="ZendeskTokenService"/>.
-/// </remarks>
 [ApiController]
 [Route("oauth")]
+[RequireAccessToken]
+[SwaggerManualToken]
 public sealed class OAuthController(ZendeskTokenService tokens) : ControllerBase
 {
     /// <summary>A link to open in a browser, valid once and for 15 minutes.</summary>
     [HttpGet("authorize-url")]
-    [RequireAccessToken]
-    [SwaggerManualToken]
     public async Task<ActionResult<ApiResponse<object>>> GetAuthorizeUrlAsync(CancellationToken cancellationToken)
     {
         try
@@ -49,8 +43,6 @@ public sealed class OAuthController(ZendeskTokenService tokens) : ControllerBase
     /// its own <c>Zendesk:RedirectUri</c> and it differs.
     /// </summary>
     [HttpPut("redirect-uri")]
-    [RequireAccessToken]
-    [SwaggerManualToken]
     public async Task<ActionResult<ApiResponse<OAuthRedirectUriState>>> RegisterRedirectUriAsync(
         [FromBody] RedirectUriRegistration? registration,
         CancellationToken cancellationToken)
@@ -66,12 +58,7 @@ public sealed class OAuthController(ZendeskTokenService tokens) : ControllerBase
         }
     }
 
-    /// <summary>Where Zendesk sends the browser back; answers a small HTML page, since a person is looking at it.</summary>
-    /// <remarks>
-    /// Unauthenticated, as Zendesk's redirect cannot carry this API's token: the single-use <c>state</c> is the check. From
-    /// 4.0 the request usually arrives relayed by the plugin's <c>onWebhook</c> rather than from the browser itself, and
-    /// this page travels back the same way.
-    /// </remarks>
+    /// <summary>Where INTERA's webhook relay forwards Zendesk's browser redirect; answers a small HTML page.</summary>
     [HttpGet("callback")]
     public async Task<IActionResult> CallbackAsync(
         [FromQuery] string? code,
@@ -97,8 +84,6 @@ public sealed class OAuthController(ZendeskTokenService tokens) : ControllerBase
     }
 
     [HttpPost("refresh")]
-    [RequireAccessToken]
-    [SwaggerManualToken]
     public async Task<ActionResult<ApiResponse<object>>> RefreshAsync(CancellationToken cancellationToken)
     {
         try
@@ -118,7 +103,7 @@ public sealed class OAuthController(ZendeskTokenService tokens) : ControllerBase
 
     /// <summary>
     /// Body of <c>PUT /oauth/redirect-uri</c>. The name is spelled out because the snake_case naming policy applies on
-    /// read as well — see the root CLAUDE.md's sharp edges.
+    /// read as well — see known upstream API edge cases.
     /// </summary>
     public sealed record RedirectUriRegistration([property: JsonPropertyName("redirect_uri")] string? RedirectUri);
 

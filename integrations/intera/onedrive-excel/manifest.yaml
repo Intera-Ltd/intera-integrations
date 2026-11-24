@@ -1,0 +1,18 @@
+# Catalog manifest of the Excel (OneDrive / SharePoint) integration.
+# Reference: docs/manifest-reference.md
+id: intera.onedrive-excel
+name: Excel (OneDrive / SharePoint)
+version: '3.3.0'
+runtime_id: intera-onedrive-excel-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.25'
+  integration_contract: 2
+categories: [external-data, document-management]
+roles: [financial, telecom, shipmanagement, logistics, manufacturing, marketplaces, farming, b2b]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: none

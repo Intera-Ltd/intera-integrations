@@ -1,17 +1,20 @@
 # Zendesk
 
-Connects INTERA to Zendesk Support via OAuth 2.0 (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint so the companion .NET 10 service requires no public ingress of its own), exposing tickets, ticket metrics, SLA events, comments, satisfaction ratings, groups, users, organizations, forms, and SLA policies.
+Connects INTERA to Zendesk Support via OAuth 2.0 (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint with AES-256-GCM encrypted persistent token storage so the companion .NET 10 service requires no public ingress of its own), exposing tickets, ticket metrics, SLA events, comments, satisfaction ratings, groups, users, organizations, forms, and SLA policies.
 
 | | |
 | --- | --- |
 | Catalog id | `intera.zendesk` |
 | Runtime id | `intera-zendesk-integration` |
-| Version | 4.1.1 |
+| Version | 4.2.0 |
+| INTERA Core | `>=0.5.94` |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
-| Deployment | Docker (`port: 8080`, `health_path: /health`) |
+| Deployment | Docker (`port: 8080`, `health_path: /health`, `data_path: /app/App_Data`) |
 
 ## Container settings (`deployment.settings`)
+
+INTERA Core automatically provisions `INTERA_SERVICE_TOKEN` and `INTERA_SERVICE_DATA_KEY` (plus a persistent volume mounted at `/app/App_Data`).
 
 | Name | Env | Kind | Required | Description |
 | --- | --- | --- | --- | --- |
@@ -23,16 +26,10 @@ Connects INTERA to Zendesk Support via OAuth 2.0 (relayed automatically through 
 | `ticket_custom_fields` | `ZENDESK__TICKETCUSTOMFIELDS` | `string` | no | Custom fields included on `zendesk_tickets` (`*` or comma-separated IDs/titles) |
 | `use_incremental_export` | `ZENDESK__USEINCREMENTALEXPORT` | `boolean` | no | Use cursor-based Incremental Export API (default: `false`) |
 | `scopes` | `ZENDESK__SCOPES` | `string` | no | OAuth scopes (default: `read`) |
-| `api_access_token` | `ZENDESK__APIACCESSTOKEN` | `secret` | no | Optional inbound shared secret |
 
 ## Connection configuration (`configSchema`)
 
-When deployed via Marketplace, Core injects `intera_service_url` automatically and both fields below can be left blank.
-
-| Field | Kind | Required | Description |
-| --- | --- | --- | --- |
-| `apiBaseUrl` | `string` | no | Optional service URL override |
-| `accessToken` | `secret` | no | Required only when `ZENDESK__APIACCESSTOKEN` is configured on the service |
+None (`configSchema: []`). When deployed via Marketplace, Core injects `intera_service_url` and `intera_service_token` automatically.
 
 ## Build and test locally
 
@@ -41,7 +38,7 @@ cd integrations/intera/zendesk/bundle
 npm ci
 npm test
 cd -
-dotnet build integrations/intera/zendesk/service/Intera.Zendesk.Api.csproj
+dotnet build -c Release integrations/intera/zendesk/service/Intera.Zendesk.Api.csproj
 node scripts/validate-manifest.mjs integrations/intera/zendesk
 ```
 

@@ -158,7 +158,7 @@ public sealed class SoqlQueryBuilder(SoqlObject sobject)
     /// <c>SELECT *</c>.
     /// </summary>
     /// <remarks>
-    /// Expanding the allowlist is the honest translation here, and not the thing CLAUDE.md warns
+    /// Expanding the allowlist is the honest translation here, and not the thing the query pushdown guidelines warn
     /// against. That warning is about a <i>plugin</i> synthesising a field list, which drifts from
     /// the API's own allowed set and silently breaks a passthrough fetch. This list <b>is</b> the
     /// API's allowed set — the same object the filter and the ordering resolve against — so there is

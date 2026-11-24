@@ -1,0 +1,80 @@
+# Catalog manifest of the Eurobank integration.
+# Reference: docs/manifest-reference.md
+id: intera.eurobank
+name: Eurobank
+version: '3.2.0'
+runtime_id: intera-eurobank-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.94'
+  integration_contract: 2
+categories: [banking, payment]
+roles: [financial, telecom, shipmanagement, logistics, manufacturing, marketplaces, farming, b2b]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/intera/eurobank@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  data_path: /app/App_Data
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: client_id
+      label: Eurobank OAuth Client ID
+      kind: string
+      required: true
+      env: EUROBANK__CLIENTID
+    - name: client_secret
+      label: Eurobank OAuth Client Secret
+      kind: secret
+      required: true
+      env: EUROBANK__CLIENTSECRET
+    - name: api_base_url
+      label: Eurobank B2B API Base URL
+      kind: string
+      default: 'https://apis.hellenicbank.com/v2/b2b'
+      env: EUROBANK__APIBASEURL
+    - name: auth_base_url
+      label: Eurobank OAuth Base URL
+      kind: string
+      default: 'https://oauth.hellenicbank.com'
+      env: EUROBANK__AUTHBASEURL
+    - name: scope
+      label: OAuth Scopes
+      description: Comma-separated Eurobank v2 OAuth scopes
+      kind: string
+      default: 'v2.b2b.get.accounts,v2.b2b.get.account.details,v2.b2b.get.account.transactions'
+      env: EUROBANK__SCOPE
+    - name: redirect_uri
+      label: OAuth Redirect URI override
+      description: Leave empty to relay OAuth redirects automatically through INTERA Core's webhook address
+      kind: string
+      required: false
+      env: EUROBANK__REDIRECTURI
+    - name: client_certificate_pem
+      label: mTLS Client Certificate (PEM)
+      description: PEM-encoded mTLS client certificate issued by the bank (mandatory in production, optional in sandbox)
+      kind: secret
+      required: false
+      env: EUROBANK__CLIENTCERTIFICATEPEM
+    - name: client_private_key_pem
+      label: mTLS Client Private Key (PEM)
+      description: PEM-encoded private key matching client_certificate_pem
+      kind: secret
+      required: false
+      env: EUROBANK__CLIENTPRIVATEKEYPEM
+    - name: client_certificate_pfx_base64
+      label: mTLS Client Certificate (.pfx Base64)
+      description: Alternative compact Base64-encoded PKCS#12 (.pfx) bundle when under 4096 characters
+      kind: secret
+      required: false
+      env: EUROBANK__CLIENTCERTIFICATEPFXBASE64
+    - name: client_certificate_password
+      label: mTLS Client Certificate Password
+      kind: secret
+      required: false
+      env: EUROBANK__CLIENTCERTIFICATEPASSWORD

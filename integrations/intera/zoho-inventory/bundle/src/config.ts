@@ -1,7 +1,6 @@
 import {
-  ACCESS_TOKEN_CONFIG_FIELD,
-  API_BASE_URL_CONFIG_FIELD,
-  INTERA_SERVICE_URL_CONFIG_FIELD,
+  INTERA_SERVICE_TOKEN_CONFIG_KEY,
+  INTERA_SERVICE_URL_CONFIG_KEY,
 } from './constants';
 import type {
   IDataQueryContext,
@@ -15,15 +14,32 @@ function readOptionalString(configJson: Record<string, unknown>, fieldName: stri
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function isBlockedMetadataHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return (
+    host === '169.254.169.254' ||
+    host.startsWith('169.254.') ||
+    host === '[::ffff:169.254.169.254]' ||
+    host === '[::ffff:a9fe:a9fe]' ||
+    host === 'metadata.google.internal'
+  );
+}
+
 function validateServiceUrl(rawUrl: string): string {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
   } catch {
-    throw new Error(`Service URL "${rawUrl}" is not a valid URL`);
+    throw new Error(`Service URL "${rawUrl}" is not a valid URL.`);
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error(`Service URL must use http or https`);
+    throw new Error('Service URL must use http or https.');
+  }
+  if (parsed.username !== '' || parsed.password !== '') {
+    throw new Error('Service URL must not embed credentials.');
+  }
+  if (isBlockedMetadataHost(parsed.hostname)) {
+    throw new Error('Service URL must not target link-local metadata endpoints.');
   }
   return rawUrl.replace(/\/+$/, '');
 }
@@ -43,19 +59,24 @@ function resolveConfigJson(
 }
 
 export function parseZohoInventoryConfig(configJson: Record<string, unknown>): IZohoInventoryConfig {
-  const rawUrl =
-    readOptionalString(configJson, API_BASE_URL_CONFIG_FIELD) ??
-    readOptionalString(configJson, INTERA_SERVICE_URL_CONFIG_FIELD);
-
+  const rawUrl = readOptionalString(configJson, INTERA_SERVICE_URL_CONFIG_KEY);
   if (rawUrl === undefined) {
     throw new Error(
-      `Service address is required ("${INTERA_SERVICE_URL_CONFIG_FIELD}" or "${API_BASE_URL_CONFIG_FIELD}")`,
+      `The service address is missing (${INTERA_SERVICE_URL_CONFIG_KEY}); install or redeploy the integration from Marketplace.`,
+    );
+  }
+
+  const apiBaseUrl = validateServiceUrl(rawUrl);
+  const serviceToken = readOptionalString(configJson, INTERA_SERVICE_TOKEN_CONFIG_KEY);
+  if (serviceToken === undefined) {
+    throw new Error(
+      `The service token is missing (${INTERA_SERVICE_TOKEN_CONFIG_KEY}); redeploy the integration.`,
     );
   }
 
   return {
-    apiBaseUrl: validateServiceUrl(rawUrl),
-    accessToken: readOptionalString(configJson, ACCESS_TOKEN_CONFIG_FIELD),
+    apiBaseUrl,
+    serviceToken,
   };
 }
 

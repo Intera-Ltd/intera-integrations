@@ -1,5 +1,3 @@
-using Intera.Common.Authentication;
-using Intera.Common.Infrastructure.OAuth;
 using Intera.Common.Infrastructure.Startup;
 using Intera.Xero.Api.Clients;
 using Intera.Xero.Api.Infrastructure;
@@ -10,7 +8,7 @@ using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddInteraApi("Intera.Xero.Api");
+builder.AddInteraApi("Intera.Xero.Api", requiresDataVolume: true);
 
 builder.Services
     .AddOptions<XeroOptions>()
@@ -30,23 +28,17 @@ builder.Services.AddHttpClient(XeroTokenService.HttpClientName, (serviceProvider
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
     });
 
-// The grant rotates its refresh token on every use, so it lives in this service's own file — see XeroTokenService.
-builder.Services.AddSingleton<IOAuthTokenStore>(serviceProvider => new FileOAuthTokenStore(
-    () => serviceProvider.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.OAuthTokenFilePath));
-
-// The redirect URL INTERA registers (its webhook address) is persisted alongside the grant.
-builder.Services.AddSingleton<IOAuthRedirectUriStore>(serviceProvider => new FileOAuthRedirectUriStore(
-    () => serviceProvider.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.RedirectUriFilePath));
+// The grant rotates its refresh token on every use; both the encrypted OAuth token and the registered webhook
+// redirect URL live on the persistent volume under /app/App_Data.
+builder.Services.AddInteraFileOAuthStores(
+    sp => sp.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.OAuthTokenFilePath,
+    sp => sp.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.RedirectUriFilePath);
 
 builder.Services.AddSingleton<XeroTokenService>();
 builder.Services.AddSingleton<XeroResponseCache>();
 builder.Services.AddSingleton<XeroClient>();
 builder.Services.AddScoped<IXeroDataService, XeroDataService>();
 builder.Services.AddHostedService<XeroTokenKeepAliveService>();
-
-builder.Services.AddSingleton<IAccessTokenStore>(serviceProvider => new StaticAccessTokenStore(
-    () => serviceProvider.GetRequiredService<IOptions<XeroOptions>>().Value.ApiAccessToken,
-    "Xero:ApiAccessToken"));
 
 var app = builder.Build();
 

@@ -1,7 +1,7 @@
 {
   "name": "@intera/intera-salesforce-integration",
   "private": true,
-  "version": "3.2.1",
+  "version": "3.3.0",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.mjs",

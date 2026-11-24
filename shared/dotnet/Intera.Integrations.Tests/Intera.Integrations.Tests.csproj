@@ -23,8 +23,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Intera.Common\Intera.Common.csproj" />
-    <ProjectReference Include="..\..\..\integrations\intera\salesforce\service\Intera.Salesforce.Api.csproj" />
+    <ProjectReference Include="..\..\..\integrations\intera\business-central\service\Intera.BusinessCentral.Api.csproj" />
+    <ProjectReference Include="..\..\..\integrations\intera\eurobank\service\Intera.Eurobank.Api.csproj" />
     <ProjectReference Include="..\..\..\integrations\intera\jira\service\Intera.Jira.Api.csproj" />
+    <ProjectReference Include="..\..\..\integrations\intera\revolut\service\Intera.Revolut.Api.csproj" />
+    <ProjectReference Include="..\..\..\integrations\intera\salesforce\service\Intera.Salesforce.Api.csproj" />
+    <ProjectReference Include="..\..\..\integrations\intera\soft1\service\Intera.Soft1.Api.csproj" />
+    <ProjectReference Include="..\..\..\integrations\intera\teamcity\service\Intera.TeamCity.Api.csproj" />
+    <ProjectReference Include="..\..\..\integrations\intera\unleashed\service\Intera.Unleashed.Api.csproj" />
     <ProjectReference Include="..\..\..\integrations\intera\xero\service\Intera.Xero.Api.csproj" />
     <ProjectReference Include="..\..\..\integrations\intera\zendesk\service\Intera.Zendesk.Api.csproj" />
     <ProjectReference Include="..\..\..\integrations\intera\zoho-inventory\service\Intera.ZohoInventory.Api.csproj" />

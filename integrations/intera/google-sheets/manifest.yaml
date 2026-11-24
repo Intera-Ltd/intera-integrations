@@ -1,0 +1,18 @@
+# Catalog manifest of the Google Sheets integration.
+# Reference: docs/manifest-reference.md
+id: intera.google-sheets
+name: Google Sheets
+version: '1.3.1'
+runtime_id: intera-gsheets-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.25'
+  integration_contract: 2
+categories: [external-data, document-management]
+roles: [financial, telecom, shipmanagement, logistics, manufacturing, marketplaces, farming, b2b]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: none

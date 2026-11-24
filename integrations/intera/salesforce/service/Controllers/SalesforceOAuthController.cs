@@ -19,11 +19,11 @@ namespace Intera.Salesforce.Api.Controllers;
 /// </remarks>
 [ApiController]
 [Route("oauth")]
+[RequireAccessToken]
+[SwaggerManualToken]
 public sealed class SalesforceOAuthController(ISalesforceOAuthService oauthService) : ControllerBase
 {
     [HttpPost("refresh")]
-    [RequireAccessToken]
-    [SwaggerManualToken]
     public async Task<IActionResult> RefreshAsync(CancellationToken cancellationToken)
     {
         try

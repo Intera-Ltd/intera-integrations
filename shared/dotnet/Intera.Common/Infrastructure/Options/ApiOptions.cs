@@ -9,7 +9,7 @@ public sealed class ApiOptions
 
     /// <summary>
     /// Optional shared inbound access token (<c>Api:AccessToken</c>). Individual services may also bind
-    /// their own section-specific <c>ApiAccessToken</c> property.
+    /// platform-managed <c>INTERA_SERVICE_TOKEN</c> credentials.
     /// </summary>
     public string? AccessToken { get; set; }
 

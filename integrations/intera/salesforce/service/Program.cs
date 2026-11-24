@@ -1,4 +1,3 @@
-using Intera.Common.Authentication;
 using Intera.Common.Infrastructure.Http;
 using Intera.Common.Infrastructure.Startup;
 using Intera.Salesforce.Api.Clients;
@@ -28,10 +27,6 @@ builder.Services.AddSingleton<ISalesforceOAuthService, SalesforceOAuthService>()
 
 builder.Services.AddScoped<ISalesforceClient, SalesforceClient>();
 builder.Services.AddScoped<ISObjectQueryService, SObjectQueryService>();
-
-builder.Services.AddSingleton<IAccessTokenStore>(serviceProvider => new StaticAccessTokenStore(
-    () => serviceProvider.GetRequiredService<IOptions<SalesforceOptions>>().Value.ApiAccessToken,
-    "Salesforce:ApiAccessToken"));
 
 var app = builder.Build();
 

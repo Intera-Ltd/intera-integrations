@@ -13,8 +13,13 @@ language. The bundle stays thin and calls the service over HTTP.
    the operator configured one), starts it in the installation's internal
    network with `deployment.env` and the values of `deployment.settings`, and
    polls `deployment.health_path` until it answers 2xx.
-4. The agent returns the container address. Core passes it to the bundle as
-   `intera_service_url` and restarts to load the bundle.
+4. The agent returns the container address. Core generates a per-installation
+   service token, passes it to the container as `INTERA_SERVICE_TOKEN` and to
+   the bundle as `intera_service_token` alongside `intera_service_url`, and
+   restarts to load the bundle. When `deployment.data_path` is declared, Core
+   mounts a persistent named volume at that path and passes a 32-byte base64
+   key as `INTERA_SERVICE_DATA_KEY` so the service can encrypt stored secrets
+   with AES-256-GCM.
 
 On update the agent starts the new container next to the old one and switches
 only when the new one is healthy; otherwise the old one keeps running. On

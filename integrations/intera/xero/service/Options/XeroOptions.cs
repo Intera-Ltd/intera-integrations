@@ -51,9 +51,6 @@ public sealed class XeroOptions
     /// </summary>
     public string TenantId { get; set; } = string.Empty;
 
-    /// <summary>Fixed shared secret inbound callers must send as X-Access-Token / Bearer to reach this API.</summary>
-    public string ApiAccessToken { get; set; } = string.Empty;
-
     /// <summary>Path (relative to the app base directory unless rooted) of the file the Xero token is kept in.</summary>
     public string OAuthTokenFilePath { get; set; } = "App_Data/xero-oauth-token.json";
 

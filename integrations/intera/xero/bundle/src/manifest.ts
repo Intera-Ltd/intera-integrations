@@ -1,6 +1,4 @@
 import {
-  ACCESS_TOKEN_CONFIG_FIELD,
-  API_BASE_URL_CONFIG_FIELD,
   DATA_SOURCE_CAPABILITY,
   DEFAULT_CACHE_TTL_SEC,
   DIRECT_API_KIND,
@@ -17,7 +15,7 @@ export const manifest: IIntegrationManifest = {
   id: INTEGRATION_ID,
   name: INTEGRATION_NAME,
   version: INTEGRATION_VERSION,
-  requires: { core: '>=0.5.25' },
+  requires: { core: '>=0.5.94' },
   compatibility: { integration_contract: 2 },
   kind: DIRECT_API_KIND,
   capabilities: [DATA_SOURCE_CAPABILITY, WEBHOOK_CAPABILITY],
@@ -27,18 +25,6 @@ export const manifest: IIntegrationManifest = {
   description:
     'Connect Xero Accounting to monitor invoices, bills, payments, bank transactions, manual journals, budgets, and financial reports.',
   configSchema: [
-    {
-      name: API_BASE_URL_CONFIG_FIELD,
-      label: 'Service URL override (leave empty when deployed from Marketplace)',
-      kind: 'string',
-      required: false,
-    },
-    {
-      name: ACCESS_TOKEN_CONFIG_FIELD,
-      label: 'Service access token (required only when Xero:ApiAccessToken is set on the service)',
-      kind: 'secret',
-      required: false,
-    },
     {
       name: TENANT_ID_CONFIG_FIELD,
       label: 'Xero tenant ID (only if the grant covers several organisations)',
@@ -51,7 +37,6 @@ export const manifest: IIntegrationManifest = {
       key: OAUTH_CALLBACK_HANDLER_KEY,
       methods: ['GET'],
       registration: 'auto',
-      invalidatesRegistrationOn: [API_BASE_URL_CONFIG_FIELD, ACCESS_TOKEN_CONFIG_FIELD],
     },
   ],
 };

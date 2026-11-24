@@ -13,11 +13,13 @@ using Intera.ZohoInventory.Api.Options;
 using Intera.ZohoInventory.Api.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Web;
 using Xunit;
@@ -26,8 +28,39 @@ namespace Intera.Integrations.Tests;
 
 public sealed class ServiceSmokeTests
 {
+    private static string RandomDataKeyBase64() =>
+        Convert.ToBase64String(RandomNumberGenerator.GetBytes(ServiceSecretsOptions.ExpectedDataKeyBytes));
+
     [Fact]
-    public async Task SalesforcePipeline_EnforcesInboundTokenAndExecutesEndToEndQueryAgainstMockUpstream()
+    public async Task MissingServiceTokenOrDataKey_FailsStartupValidationBeforeListening()
+    {
+        var ct = TestContext.Current.CancellationToken;
+
+        var missingTokenBuilder = WebApplication.CreateBuilder();
+        missingTokenBuilder.WebHost.UseTestServer();
+        missingTokenBuilder.AddInteraApi("MissingToken.Test");
+        await using (var app = missingTokenBuilder.Build())
+        {
+            app.UseInteraApi(httpsRedirection: false);
+            await Assert.ThrowsAsync<OptionsValidationException>(() => app.StartAsync(ct));
+        }
+
+        var missingDataKeyBuilder = WebApplication.CreateBuilder();
+        missingDataKeyBuilder.WebHost.UseTestServer();
+        missingDataKeyBuilder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [ServiceSecretsOptions.ServiceTokenEnvironmentVariable] = "tok-1"
+        });
+        missingDataKeyBuilder.AddInteraApi("MissingDataKey.Test", requiresDataVolume: true);
+        await using (var app = missingDataKeyBuilder.Build())
+        {
+            app.UseInteraApi(httpsRedirection: false);
+            await Assert.ThrowsAsync<OptionsValidationException>(() => app.StartAsync(ct));
+        }
+    }
+
+    [Fact]
+    public async Task SalesforcePipeline_EnforcesInboundServiceTokenAndExecutesEndToEndQueryAgainstMockUpstream()
     {
         var ct = TestContext.Current.CancellationToken;
         const string inboundSecret = "inbound-test-secret";
@@ -56,6 +89,10 @@ public sealed class ServiceSmokeTests
 
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [ServiceSecretsOptions.ServiceTokenEnvironmentVariable] = inboundSecret
+        });
         builder.AddInteraApi("Intera.Salesforce.Api.Test");
 
         var mvc = builder.Services.AddControllers();
@@ -69,7 +106,6 @@ public sealed class ServiceSmokeTests
                 o.LoginUrl = "https://acme.my.salesforce.com";
                 o.ClientId = "sf-client";
                 o.ClientSecret = "sf-secret";
-                o.ApiAccessToken = inboundSecret;
             })
             .ValidateOnStart();
         builder.Services.AddSingleton<IValidateOptions<SalesforceOptions>, SalesforceOptionsValidator>();
@@ -80,8 +116,6 @@ public sealed class ServiceSmokeTests
         builder.Services.AddSingleton<ISalesforceOAuthService, SalesforceOAuthService>();
         builder.Services.AddScoped<ISalesforceClient, SalesforceClient>();
         builder.Services.AddScoped<ISObjectQueryService, SObjectQueryService>();
-        builder.Services.AddSingleton<IAccessTokenStore>(
-            new StaticAccessTokenStore(() => inboundSecret, "Salesforce:ApiAccessToken"));
 
         await using var app = builder.Build();
         app.UseInteraApi(httpsRedirection: false);
@@ -94,6 +128,9 @@ public sealed class ServiceSmokeTests
 
         var unauthRefresh = await client.PostAsync("/oauth/refresh", content: null, ct);
         Assert.Equal(HttpStatusCode.Unauthorized, unauthRefresh.StatusCode);
+
+        var unauthQuery = await client.PostAsJsonAsync("/api/account/query", new { skip = 0, top = 10 }, ct);
+        Assert.Equal(HttpStatusCode.Unauthorized, unauthQuery.StatusCode);
 
         using var authRefreshReq = new HttpRequestMessage(HttpMethod.Post, "/oauth/refresh");
         authRefreshReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", inboundSecret);
@@ -118,7 +155,7 @@ public sealed class ServiceSmokeTests
     }
 
     [Fact]
-    public async Task ZohoAndXeroOAuthPipelines_EnforceAccessTokensAndCompleteRelayedOAuthFlow()
+    public async Task ZohoAndXeroOAuthPipelines_EnforceServiceTokensOnEveryRouteAndEncryptStoredGrant()
     {
         var ct = TestContext.Current.CancellationToken;
         const string secret = "inbound-secret-2";
@@ -126,9 +163,12 @@ public sealed class ServiceSmokeTests
 
         try
         {
-            // 1. Zoho POST /oauth/refresh requires inbound token.
             var zohoBuilder = WebApplication.CreateBuilder();
             zohoBuilder.WebHost.UseTestServer();
+            zohoBuilder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [ServiceSecretsOptions.ServiceTokenEnvironmentVariable] = secret
+            });
             zohoBuilder.AddInteraApi("Intera.ZohoInventory.Api.Test");
             var zohoMvc = zohoBuilder.Services.AddControllers();
             zohoMvc.PartManager.ApplicationParts.Clear();
@@ -142,7 +182,6 @@ public sealed class ServiceSmokeTests
                     o.ClientId = "z-client";
                     o.ClientSecret = "z-secret";
                     o.RefreshToken = "z-refresh";
-                    o.ApiAccessToken = secret;
                 })
                 .ValidateOnStart();
             zohoBuilder.Services.AddSingleton<IValidateOptions<ZohoInventoryOptions>, ZohoInventoryOptionsValidator>();
@@ -150,7 +189,6 @@ public sealed class ServiceSmokeTests
                 .ConfigurePrimaryHttpMessageHandler(() => new StubHttpMessageHandler((_, _) => Task.FromResult(
                     StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"access_token":"z-acc","expires_in":3600}"""))));
             zohoBuilder.Services.AddSingleton<IZohoOAuthService, ZohoOAuthService>();
-            zohoBuilder.Services.AddSingleton<IAccessTokenStore>(new StaticAccessTokenStore(() => secret, "ZohoInventory:ApiAccessToken"));
 
             await using (var zohoApp = zohoBuilder.Build())
             {
@@ -167,10 +205,15 @@ public sealed class ServiceSmokeTests
                 Assert.Equal(HttpStatusCode.OK, auth.StatusCode);
             }
 
-            // 2. Xero relayed OAuth flow: PUT /oauth/redirect-uri -> GET /oauth/authorize-url -> GET /oauth/callback -> GET /oauth/status.
+            var xeroTokenPath = Path.Combine(tempDir, "xero-token.json");
             var xeroBuilder = WebApplication.CreateBuilder();
             xeroBuilder.WebHost.UseTestServer();
-            xeroBuilder.AddInteraApi("Intera.Xero.Api.Test");
+            xeroBuilder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [ServiceSecretsOptions.ServiceTokenEnvironmentVariable] = secret,
+                [ServiceSecretsOptions.DataKeyEnvironmentVariable] = RandomDataKeyBase64()
+            });
+            xeroBuilder.AddInteraApi("Intera.Xero.Api.Test", requiresDataVolume: true);
             var xeroMvc = xeroBuilder.Services.AddControllers();
             xeroMvc.PartManager.ApplicationParts.Clear();
             xeroMvc.AddApplicationPart(typeof(Intera.Xero.Api.Controllers.OAuthController).Assembly);
@@ -181,26 +224,27 @@ public sealed class ServiceSmokeTests
                 {
                     o.ClientId = "x-client";
                     o.ClientSecret = "x-secret";
-                    o.ApiAccessToken = secret;
-                    o.OAuthTokenFilePath = Path.Combine(tempDir, "xero-token.json");
+                    o.OAuthTokenFilePath = xeroTokenPath;
                     o.RedirectUriFilePath = Path.Combine(tempDir, "xero-redirect.json");
                 })
                 .ValidateOnStart();
             xeroBuilder.Services.AddSingleton<IValidateOptions<XeroOptions>, XeroOptionsValidator>();
             xeroBuilder.Services.AddHttpClient(XeroTokenService.HttpClientName)
                 .ConfigurePrimaryHttpMessageHandler(() => new StubHttpMessageHandler((_, _) => Task.FromResult(
-                    StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"access_token":"x-acc","refresh_token":"x-ref","expires_in":1800}"""))));
-            xeroBuilder.Services.AddSingleton<IOAuthTokenStore>(sp =>
-                new FileOAuthTokenStore(() => sp.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.OAuthTokenFilePath));
-            xeroBuilder.Services.AddSingleton<IOAuthRedirectUriStore>(sp =>
-                new FileOAuthRedirectUriStore(() => sp.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.RedirectUriFilePath));
+                    StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"access_token":"x-acc-secret","refresh_token":"x-ref-secret","expires_in":1800}"""))));
+            xeroBuilder.Services.AddInteraFileOAuthStores(
+                sp => sp.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.OAuthTokenFilePath,
+                sp => sp.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.RedirectUriFilePath);
             xeroBuilder.Services.AddSingleton<XeroTokenService>();
-            xeroBuilder.Services.AddSingleton<IAccessTokenStore>(new StaticAccessTokenStore(() => secret, "Xero:ApiAccessToken"));
 
             await using var xeroApp = xeroBuilder.Build();
             xeroApp.UseInteraApi(httpsRedirection: false);
             await xeroApp.StartAsync(ct);
             using var xeroClient = xeroApp.GetTestClient();
+
+            // Even /oauth/status and /oauth/callback must reject unauthenticated callers.
+            Assert.Equal(HttpStatusCode.Unauthorized, (await xeroClient.GetAsync("/oauth/status", ct)).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await xeroClient.GetAsync("/oauth/callback?code=a&state=b", ct)).StatusCode);
 
             using var putReq = new HttpRequestMessage(HttpMethod.Put, "/oauth/redirect-uri")
             {
@@ -219,15 +263,24 @@ public sealed class ServiceSmokeTests
             var authorizeUrl = authUrlDoc.RootElement.GetProperty("data").GetProperty("url").GetString()!;
             var state = HttpUtility.ParseQueryString(new Uri(authorizeUrl).Query)["state"]!;
 
-            var callbackRes = await xeroClient.GetAsync($"/oauth/callback?code=code-123&state={Uri.EscapeDataString(state)}", ct);
+            using var callbackReq = new HttpRequestMessage(HttpMethod.Get, $"/oauth/callback?code=code-123&state={Uri.EscapeDataString(state)}");
+            callbackReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
+            var callbackRes = await xeroClient.SendAsync(callbackReq, ct);
             Assert.Equal(HttpStatusCode.OK, callbackRes.StatusCode);
 
-            var statusRes = await xeroClient.GetAsync("/oauth/status", ct);
+            using var statusReq = new HttpRequestMessage(HttpMethod.Get, "/oauth/status");
+            statusReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
+            var statusRes = await xeroClient.SendAsync(statusReq, ct);
             Assert.Equal(HttpStatusCode.OK, statusRes.StatusCode);
             using var statusDoc = JsonDocument.Parse(await statusRes.Content.ReadAsStringAsync(ct));
             Assert.True(statusDoc.RootElement.GetProperty("has_access_token").GetBoolean());
             Assert.True(statusDoc.RootElement.GetProperty("has_refresh_token").GetBoolean());
             Assert.Equal("intera", statusDoc.RootElement.GetProperty("redirect_uri_source").GetString());
+
+            // Verify persisted token file is encrypted at rest.
+            var persistedText = await File.ReadAllTextAsync(xeroTokenPath, ct);
+            Assert.DoesNotContain("x-acc-secret", persistedText, StringComparison.Ordinal);
+            Assert.DoesNotContain("x-ref-secret", persistedText, StringComparison.Ordinal);
         }
         finally
         {

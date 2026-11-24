@@ -1,5 +1,3 @@
-using Intera.Common.Authentication;
-using Intera.Common.Infrastructure.OAuth;
 using Intera.Common.Infrastructure.Startup;
 using Intera.Zendesk.Api.Clients;
 using Intera.Zendesk.Api.Infrastructure;
@@ -10,7 +8,7 @@ using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddInteraApi("Intera.Zendesk.Api");
+builder.AddInteraApi("Intera.Zendesk.Api", requiresDataVolume: true);
 
 builder.Services
     .AddOptions<ZendeskOptions>()
@@ -30,23 +28,17 @@ builder.Services.AddHttpClient(ZendeskClient.HttpClientName, (serviceProvider, h
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
     });
 
-// The grant rotates its refresh token on every use, so it lives in this service's own file — see ZendeskTokenService.
-builder.Services.AddSingleton<IOAuthTokenStore>(serviceProvider => new FileOAuthTokenStore(
-    () => serviceProvider.GetRequiredService<IOptionsMonitor<ZendeskOptions>>().CurrentValue.OAuthTokenFilePath));
-
-// The redirect URL INTERA registers (its webhook address) is kept next to the grant, for the same reason.
-builder.Services.AddSingleton<IOAuthRedirectUriStore>(serviceProvider => new FileOAuthRedirectUriStore(
-    () => serviceProvider.GetRequiredService<IOptionsMonitor<ZendeskOptions>>().CurrentValue.RedirectUriFilePath));
+// The grant rotates its refresh token on every use; both the encrypted OAuth token and the registered webhook
+// redirect URL live on the persistent volume under /app/App_Data.
+builder.Services.AddInteraFileOAuthStores(
+    sp => sp.GetRequiredService<IOptionsMonitor<ZendeskOptions>>().CurrentValue.OAuthTokenFilePath,
+    sp => sp.GetRequiredService<IOptionsMonitor<ZendeskOptions>>().CurrentValue.RedirectUriFilePath);
 
 builder.Services.AddSingleton<ZendeskTokenService>();
 builder.Services.AddSingleton<ZendeskResponseCache>();
 builder.Services.AddSingleton<ZendeskClient>();
 builder.Services.AddScoped<IZendeskDataService, ZendeskDataService>();
 builder.Services.AddHostedService<ZendeskTokenKeepAliveService>();
-
-builder.Services.AddSingleton<IAccessTokenStore>(serviceProvider => new StaticAccessTokenStore(
-    () => serviceProvider.GetRequiredService<IOptions<ZendeskOptions>>().Value.ApiAccessToken,
-    "Zendesk:ApiAccessToken"));
 
 var app = builder.Build();
 
