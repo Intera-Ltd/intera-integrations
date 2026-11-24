@@ -12,7 +12,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInteraApi("Intera.Jira.Api");
 
-builder.Services.Configure<JiraOptions>(builder.Configuration.GetSection(JiraOptions.SectionName));
+builder.Services
+    .AddOptions<JiraOptions>()
+    .Bind(builder.Configuration.GetSection(JiraOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<JiraOptions>, JiraOptionsValidator>();
 
 // One named client for the Atlassian auth server and the API gateway alike; the Singletons below take it from the
 // factory per call, so no handler is pinned for the process lifetime.
@@ -30,6 +34,10 @@ builder.Services.AddHttpClient(JiraTokenService.HttpClientName, (serviceProvider
 builder.Services.AddSingleton<IOAuthTokenStore>(serviceProvider => new FileOAuthTokenStore(
     () => serviceProvider.GetRequiredService<IOptionsMonitor<JiraOptions>>().CurrentValue.OAuthTokenFilePath));
 
+// The redirect URL INTERA registers (its webhook address) is persisted alongside the grant.
+builder.Services.AddSingleton<IOAuthRedirectUriStore>(serviceProvider => new FileOAuthRedirectUriStore(
+    () => serviceProvider.GetRequiredService<IOptionsMonitor<JiraOptions>>().CurrentValue.RedirectUriFilePath));
+
 builder.Services.AddSingleton<JiraTokenService>();
 builder.Services.AddSingleton<JiraResponseCache>();
 builder.Services.AddSingleton<JiraClient>();
@@ -42,7 +50,8 @@ builder.Services.AddSingleton<IAccessTokenStore>(serviceProvider => new StaticAc
 
 var app = builder.Build();
 
-// No HTTPS redirection: TLS ends at nginx, which the app's callback URL has to point at anyway.
+// No HTTPS redirection: the callback arrives relayed by INTERA (or through a reverse proxy when Jira:RedirectUri is
+// set), and the plugin calls this service over the internal network.
 app.UseInteraApi(httpsRedirection: false);
 
 app.Run();

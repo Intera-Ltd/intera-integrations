@@ -37,7 +37,8 @@ const tickets = () => bundle.dataSources.find((s) => s.id === 'zendesk_tickets')
 describe('zendesk bundle contract', () => {
   it('exports manifest, dataSources, getDataSources, provisionInstance, testConnection, and webhook hooks', () => {
     assert.equal(bundle.manifest.id, 'intera-zendesk-integration');
-    assert.equal(bundle.manifest.version, '4.1.0');
+    assert.equal(bundle.manifest.version, '4.1.1');
+    assert.equal(bundle.manifest.requires.core, '>=0.5.25');
     assert.equal(bundle.manifest.compatibility.integration_contract, 2);
     assert.ok(bundle.dataSources.length >= 10);
     assert.deepEqual(bundle.getDataSources(), bundle.dataSources);
@@ -77,7 +78,7 @@ describe('zendesk bundle contract', () => {
     );
   });
 
-  it('forwards context.signal and supports testConnection + registerWebhook', async () => {
+  it('forwards context.signal and supports testConnection + registerWebhook + onWebhook', async () => {
     const controller = new AbortController();
     await tickets().getData({}, context({ intera_service_url: SERVICE_URL }, { signal: controller.signal }));
     assert.equal(calls[0].init.signal.aborted, false);
@@ -102,6 +103,12 @@ describe('zendesk bundle contract', () => {
           status: 200,
         });
       }
+      if (url.includes('/oauth/callback?')) {
+        return new Response('<html><body>Zendesk connected</body></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html; charset=utf-8' },
+        });
+      }
       return new Response(
         JSON.stringify({ ok: true, data: [{ zendesk_subdomain: 'acme', groups: 4 }], error: null }),
         { status: 200 },
@@ -109,6 +116,7 @@ describe('zendesk bundle contract', () => {
     };
 
     const conn = await bundle.testConnection({ config: { intera_service_url: SERVICE_URL }, instanceId: null, instanceSlug: null });
+    assert.equal(conn.status, 'ok');
     assert.match(conn.detail, /Zendesk: acme \(4 groups\)/);
 
     const reg = await bundle.registerWebhook({
@@ -118,5 +126,79 @@ describe('zendesk bundle contract', () => {
       publicId: '123',
     });
     assert.equal(reg.ok, true);
+
+    const relayed = await bundle.onWebhook(
+      {
+        method: 'GET',
+        rawQuery: 'code=zd-code&state=zd-state',
+        headers: {},
+        rawBody: Buffer.alloc(0),
+        sourceIp: '127.0.0.1',
+        receivedAt: new Date(),
+      },
+      {
+        config: { intera_service_url: SERVICE_URL },
+        handlerKey: 'oauth-callback',
+        webhookUrl: 'https://core.example.test/api/webhooks/123',
+      },
+    );
+    assert.equal(relayed.status, 200);
+    assert.match(String(relayed.body), /Zendesk connected/);
+  });
+
+  it('returns needs_authorization with authorizeUrl and names ZENDESK__CLIENTID/CLIENTSECRET when unconfigured', async () => {
+    respond = (url, init) => {
+      if (url.endsWith('/oauth/status')) {
+        return new Response(
+          JSON.stringify({
+            configured: true,
+            has_access_token: false,
+            has_refresh_token: false,
+            redirect_uri: '',
+            redirect_uri_source: null,
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith('/oauth/redirect-uri') && init.method === 'PUT') {
+        return new Response(
+          JSON.stringify({ ok: true, data: { redirect_uri: 'https://core.example.test/api/webhooks/123', source: 'intera' }, error: null }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith('/oauth/authorize-url')) {
+        return new Response(
+          JSON.stringify({ ok: true, data: { url: 'https://acme.zendesk.com/oauth/authorizations/new?state=zd1' }, error: null }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`Unexpected URL ${url}`);
+    };
+
+    const pending = await bundle.testConnection({
+      config: { intera_service_url: SERVICE_URL },
+      instanceId: 'inst-zd',
+      instanceSlug: 'zendesk',
+      webhookUrls: [{ handlerKey: 'oauth-callback', url: 'https://core.example.test/api/webhooks/123' }],
+    });
+    assert.equal(pending.status, 'needs_authorization');
+    assert.equal(pending.authorizeUrl, 'https://acme.zendesk.com/oauth/authorizations/new?state=zd1');
+
+    respond = () =>
+      new Response(
+        JSON.stringify({
+          configured: false,
+          has_access_token: false,
+          has_refresh_token: false,
+          redirect_uri: '',
+          redirect_uri_source: null,
+        }),
+        { status: 200 },
+      );
+
+    await assert.rejects(
+      bundle.testConnection({ config: { intera_service_url: SERVICE_URL }, instanceId: null, instanceSlug: null }),
+      /ZENDESK__CLIENTID.*ZENDESK__CLIENTSECRET/,
+    );
   });
 });

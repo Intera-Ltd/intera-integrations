@@ -20,10 +20,16 @@ public sealed class JiraOptions
     public string ClientSecret { get; set; } = string.Empty;
 
     /// <summary>
-    /// Must equal, character for character, the callback URL registered on the app (Authorization → OAuth 2.0
-    /// (3LO) → Callback URL) — e.g. <c>https://jira.example.com/oauth/callback</c>.
+    /// Explicit callback URL override (e.g. <c>https://jira.example.com/oauth/callback</c> or
+    /// <c>http://localhost:8110/oauth/callback</c>). Leave empty to relay OAuth redirects automatically through
+    /// INTERA Core's webhook address (<c>PUT /oauth/redirect-uri</c>, persisted in <see cref="RedirectUriFilePath"/>).
     /// </summary>
     public string RedirectUri { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Path (relative to the app base directory unless rooted) of the file storing the redirect URL registered by INTERA.
+    /// </summary>
+    public string RedirectUriFilePath { get; set; } = "App_Data/jira-redirect-uri.json";
 
     /// <summary>
     /// Space- or comma-separated OAuth scopes.

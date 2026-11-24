@@ -27,7 +27,7 @@ license: Apache-2.0
 provides: [finance.accounting@1.0.0]
 deployment:
   type: docker
-  image: ghcr.io/intera-ltd/billing@sha256:<64 hex>
+  image: ghcr.io/intera-ltd/acme/billing@sha256:<64 hex>
   port: 8080
   health_path: /health
   env:

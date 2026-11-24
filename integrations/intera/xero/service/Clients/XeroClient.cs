@@ -1,3 +1,4 @@
+using Intera.Common.Infrastructure.Http;
 using Intera.Xero.Api.Infrastructure;
 using Intera.Xero.Api.Options;
 using Intera.Xero.Api.Services;
@@ -75,7 +76,8 @@ public sealed class XeroClient(
             ConnectionsLifetime,
             async ct =>
             {
-                var response = await SendAsync(Options.ConnectionsUrl, tenantId: null, ct).ConfigureAwait(false);
+                var connectionsUri = HttpsUriValidator.RequireHttpsOrLoopback(Options.ConnectionsUrl, "Xero:ConnectionsUrl");
+                var response = await SendAsync(connectionsUri.AbsoluteUri, tenantId: null, ct).ConfigureAwait(false);
                 return response.Root.Deserialize<List<XeroConnection>>(ConnectionJson) ?? [];
             },
             cancellationToken).ConfigureAwait(false);
@@ -414,9 +416,16 @@ public sealed class XeroClient(
 
     private string BuildUrl(string path, IReadOnlyDictionary<string, string?>? query)
     {
-        var url = path.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-            ? path
-            : $"{Options.ApiBaseUrl.TrimEnd('/')}/{path.TrimStart('/')}";
+        string url;
+        if (path.Contains("://", StringComparison.Ordinal))
+        {
+            url = HttpsUriValidator.RequireHttpsOrLoopback(path, "Xero request URL").AbsoluteUri;
+        }
+        else
+        {
+            var apiBaseUri = HttpsUriValidator.RequireHttpsOrLoopback(Options.ApiBaseUrl, "Xero:ApiBaseUrl");
+            url = $"{apiBaseUri.AbsoluteUri.TrimEnd('/')}/{path.TrimStart('/')}";
+        }
 
         if (query is null || query.Count == 0)
         {

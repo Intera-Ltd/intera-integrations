@@ -6,7 +6,7 @@ Connects INTERA directly to the GitHub REST API (`https://api.github.com` or Git
 | --- | --- |
 | Catalog id | `intera.github` |
 | Runtime id | `intera-github-integration` |
-| Version | 3.2.0 |
+| Version | 3.2.1 |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
 | Deployment | Bundle-only (`deployment.type: none`) |

@@ -1,3 +1,4 @@
+import { isSignedIn } from './api/connection';
 import { createJiraClient } from './api/jira-client';
 import { parsePluginConfig } from './config';
 import { SOURCE_ID_PREFIX } from './constants';
@@ -29,19 +30,20 @@ const TYPES: Record<ICustomFieldDescriptor['type'], DataSourceFieldType> = {
 /**
  * Called by Core when an instance is created or updated, before the row is persisted.
  *
- * Two jobs, as in intera-zoho-inventory-integration. It proves the whole chain — this plugin reaches
- * Intera.Jira.Api, the access token is right, the API's Atlassian grant works and the site choice resolves —
- * because `GET /api/Schema/custom-fields` reads the site's fields from Jira, and anything wrong throws and rejects
- * the save with the API's own reason. And it appends the site's custom fields to `jira_issues`: Core replaces a
- * source's static `fields` wholesale with what this returns, so the static list goes first.
- *
- * The result is a snapshot: a custom field added in Jira later appears after the instance is saved again. It is
- * queryable before that — the API admits any `customfield_NNNNN` name.
+ * Before anyone has signed in to Jira, saving the instance must succeed so Core can generate and register the
+ * `oauth-callback` webhook URL used for OAuth sign-in. In that state, `GET /api/Schema/sources` proves reachability
+ * and inbound token auth without requiring an Atlassian grant; once signed in, saving again appends custom fields.
  */
 export async function provisionInstance(
   context: IIntegrationProvisionContext,
 ): Promise<IIntegrationProvisionResult> {
   const client = createJiraClient(parsePluginConfig(context.config));
+
+  if (!isSignedIn(await client.getOAuthStatus())) {
+    await client.get('/api/Schema/sources');
+    return { dataSources: [] };
+  }
+
   const data = await client.get('/api/Schema/custom-fields');
   const customFields = Array.isArray(data) ? (data as ICustomFieldDescriptor[]) : [];
 

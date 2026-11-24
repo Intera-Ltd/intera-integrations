@@ -30,44 +30,6 @@ const PREDEFINED_ENTITIES: Record<string, string> = {
   apos: "'",
 };
 
-function decodeEntities(text: string): string {
-  if (!text.includes('&')) {
-    return text;
-  }
-  return text.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|[A-Za-z]+);/g, (match, body: string) => {
-    if (body.startsWith('#x')) {
-      return String.fromCodePoint(parseInt(body.slice(2), 16));
-    }
-    if (body.startsWith('#')) {
-      return String.fromCodePoint(parseInt(body.slice(1), 10));
-    }
-    return PREDEFINED_ENTITIES[body] ?? match;
-  });
-}
-
-function localName(qualified: string): string {
-  const colon = qualified.indexOf(':');
-  return colon < 0 ? qualified : qualified.slice(colon + 1);
-}
-
-function isNameChar(code: number): boolean {
-  // Anything that is not whitespace, `/`, `>` or `=` — permissive on purpose:
-  // a reader of trusted exports has no reason to reject a Unicode name.
-  return !(
-    code === 0x20 ||
-    code === 0x09 ||
-    code === 0x0a ||
-    code === 0x0d ||
-    code === 0x2f ||
-    code === 0x3e ||
-    code === 0x3d
-  );
-}
-
-function isWhitespace(code: number): boolean {
-  return code === 0x20 || code === 0x09 || code === 0x0a || code === 0x0d;
-}
-
 /**
  * Parses a whole document and returns its root element. Throws on a document
  * that is not well-formed where that matters for reading it (an unclosed tag,
@@ -233,4 +195,62 @@ export function firstChild(
   name: string,
 ): IXmlElement | undefined {
   return element.children.find((child) => child.name === name);
+}
+
+/**
+ * Decodes predefined XML entities and numeric character references.
+ * Out-of-range code points and UTF-16 lone surrogates are replaced with U+FFFD
+ * instead of throwing `RangeError` and aborting the entire list parse.
+ */
+export function decodeEntities(text: string): string {
+  if (!text.includes('&')) {
+    return text;
+  }
+  return text.replace(
+    /&(#x[0-9a-fA-F]+|#[0-9]+|[A-Za-z]+);/g,
+    (match, body: string) => {
+      if (body.startsWith('#x')) {
+        return decodeCodePoint(parseInt(body.slice(2), 16));
+      }
+      if (body.startsWith('#')) {
+        return decodeCodePoint(parseInt(body.slice(1), 10));
+      }
+      return PREDEFINED_ENTITIES[body] ?? match;
+    },
+  );
+}
+
+function decodeCodePoint(codePoint: number): string {
+  if (
+    !Number.isInteger(codePoint) ||
+    codePoint < 0 ||
+    codePoint > 0x10ffff ||
+    (codePoint >= 0xd800 && codePoint <= 0xdfff)
+  ) {
+    return '\uFFFD';
+  }
+  return String.fromCodePoint(codePoint);
+}
+
+function localName(qualified: string): string {
+  const colon = qualified.indexOf(':');
+  return colon < 0 ? qualified : qualified.slice(colon + 1);
+}
+
+function isNameChar(code: number): boolean {
+  // Anything that is not whitespace, `/`, `>` or `=` — permissive on purpose:
+  // a reader of trusted exports has no reason to reject a Unicode name.
+  return !(
+    code === 0x20 ||
+    code === 0x09 ||
+    code === 0x0a ||
+    code === 0x0d ||
+    code === 0x2f ||
+    code === 0x3e ||
+    code === 0x3d
+  );
+}
+
+function isWhitespace(code: number): boolean {
+  return code === 0x20 || code === 0x09 || code === 0x0a || code === 0x0d;
 }

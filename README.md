@@ -178,8 +178,8 @@ scripts/
 ```
 
 `<developer>` is your developer slug in the Integration Library and
-`<integration>` is unique across the repository: the service image is
-published as `ghcr.io/intera-ltd/<integration>`.
+`<integration>` is unique within `<developer>`: the service image is
+published as `ghcr.io/intera-ltd/<developer>/<integration>`.
 
 ## Local development and testing
 
@@ -215,11 +215,13 @@ A version goes **pull request → release → catalog review → Marketplace**.
    [review guidelines](docs/review-guidelines.md).
 2. **Release.** After the merge a maintainer pushes the tag
    `<developer>/<integration>/v<version>`, for example
-   `intera/hello-dotnet/v1.0.0`. The release workflow builds and tests the
-   bundle, pushes the image `ghcr.io/intera-ltd/<integration>:<version>` for
+   `intera/hello-dotnet/v1.0.1`. The release workflow builds and tests the
+   bundle, pushes the image `ghcr.io/intera-ltd/<developer>/<integration>:<version>` for
    `linux/amd64` and `linux/arm64`, writes its digest into the packed
    manifest and attaches `<developer>-<integration>-<version>.tar.gz` to a
-   GitHub release.
+   GitHub release. New GHCR packages default to private — after the very first
+   release of a service integration, switch its GHCR package visibility to
+   **Public** so installation agents can pull it without credentials.
 3. **Catalog.** The version is uploaded to the Integration Library with the
    `intera-library` CLI. It takes a **plugin folder**: `manifest.yaml` with
    the real image digest and the built `dist/`, which is exactly the content

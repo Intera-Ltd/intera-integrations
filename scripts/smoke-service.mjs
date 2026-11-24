@@ -31,9 +31,48 @@ if (deployment?.type !== 'docker') {
 
 const name = `smoke-${process.pid}`;
 const FAKE = { string: 'smoke-test', secret: 'smoke-test', number: 0, boolean: false };
+const URL_SETTING = /(?:^|_)(?:url|uri)$/i;
+const fakeSettingValue = (setting) => {
+  if (setting.kind === 'string' && URL_SETTING.test(setting.name ?? '')) {
+    return 'https://smoke-test.example.com';
+  }
+  return FAKE[setting.kind];
+};
+
+const requiredWithoutDefault = (deployment.settings ?? []).filter(
+  (s) => s.required === true && s.default === undefined,
+);
+if (requiredWithoutDefault.length > 0) {
+  const missingName = `${name}-missing`;
+  const fixedEnv = Object.entries(deployment.env ?? {}).flatMap(([key, value]) => ['-e', `${key}=${value}`]);
+  try {
+    execFileSync('docker', ['run', '-d', '--name', missingName, ...fixedEnv, image], { stdio: 'ignore' });
+    const waitDeadline = Date.now() + 15_000;
+    let exited = false;
+    let exitCode = 0;
+    while (Date.now() < waitDeadline) {
+      const inspect = execFileSync('docker', ['inspect', '--format', '{{.State.Running}}:{{.State.ExitCode}}', missingName], { encoding: 'utf8' }).trim();
+      const [running, code] = inspect.split(':');
+      if (running === 'false') {
+        exited = true;
+        exitCode = Number(code);
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    if (!exited || exitCode === 0) {
+      throw new Error('service stayed up or exited 0 when required deployment.settings were omitted');
+    }
+    console.log('verified: fails fast at startup when required settings are missing');
+  } finally {
+    spawnSync('docker', ['rm', '-f', missingName], { stdio: 'ignore' });
+  }
+}
+
 const variables = { ...(deployment.env ?? {}) };
 for (const setting of deployment.settings ?? []) {
-  const value = setting.default ?? FAKE[setting.kind];
+  if (setting.default === undefined && setting.required !== true) continue;
+  const value = setting.default ?? fakeSettingValue(setting);
   variables[setting.env ?? setting.name.toUpperCase()] = String(value);
 }
 const env = Object.entries(variables).flatMap(([key, value]) => ['-e', `${key}=${value}`]);

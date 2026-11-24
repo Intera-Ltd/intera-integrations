@@ -37,7 +37,7 @@ const items = () => bundle.dataSources.find((source) => source.id === 'items');
 describe('contract exports', () => {
   it('exposes the manifest Core expects', () => {
     assert.equal(bundle.manifest.id, 'hello_dotnet');
-    assert.equal(bundle.manifest.version, '1.0.0');
+    assert.equal(bundle.manifest.version, '1.0.1');
     assert.deepEqual(bundle.manifest.capabilities, ['datasource']);
     assert.equal(bundle.manifest.compatibility.integration_contract, 2);
     assert.equal(typeof bundle.testConnection, 'function');

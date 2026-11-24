@@ -2,12 +2,12 @@
 # Reference: docs/manifest-reference.md
 id: intera.jira
 name: Jira
-version: '3.2.0'
+version: '3.3.0'
 runtime_id: intera-jira-integration
 developer:
   id: intera
 compatibility:
-  intera_min: '0.5.0'
+  intera_min: '0.5.25'
   integration_contract: 2
 categories: [project-management, customer-support]
 roles: [telecom, logistics, manufacturing, financial, marketplaces]
@@ -16,7 +16,7 @@ capabilities:
 license: Apache-2.0
 deployment:
   type: docker
-  image: ghcr.io/intera-ltd/jira@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  image: ghcr.io/intera-ltd/intera/jira@sha256:0000000000000000000000000000000000000000000000000000000000000000
   port: 8080
   health_path: /health
   env:
@@ -33,10 +33,10 @@ deployment:
       required: true
       env: JIRA__CLIENTSECRET
     - name: redirect_uri
-      label: OAuth Callback URL
-      description: Callback URL registered on the Atlassian 3LO app (e.g. https://jira.example.com/oauth/callback)
+      label: OAuth Callback URL override
+      description: Leave empty to relay OAuth redirects automatically through INTERA Core's webhook address
       kind: string
-      required: true
+      required: false
       env: JIRA__REDIRECTURI
     - name: site_url
       label: Default Jira Site URL

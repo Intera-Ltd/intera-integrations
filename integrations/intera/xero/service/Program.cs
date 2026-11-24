@@ -12,7 +12,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInteraApi("Intera.Xero.Api");
 
-builder.Services.Configure<XeroOptions>(builder.Configuration.GetSection(XeroOptions.SectionName));
+builder.Services
+    .AddOptions<XeroOptions>()
+    .Bind(builder.Configuration.GetSection(XeroOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<XeroOptions>, XeroOptionsValidator>();
 
 // One named client for the identity server and the API alike; the Singletons below take it from the factory per
 // call, so no handler is pinned for the process lifetime.
@@ -30,6 +34,10 @@ builder.Services.AddHttpClient(XeroTokenService.HttpClientName, (serviceProvider
 builder.Services.AddSingleton<IOAuthTokenStore>(serviceProvider => new FileOAuthTokenStore(
     () => serviceProvider.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.OAuthTokenFilePath));
 
+// The redirect URL INTERA registers (its webhook address) is persisted alongside the grant.
+builder.Services.AddSingleton<IOAuthRedirectUriStore>(serviceProvider => new FileOAuthRedirectUriStore(
+    () => serviceProvider.GetRequiredService<IOptionsMonitor<XeroOptions>>().CurrentValue.RedirectUriFilePath));
+
 builder.Services.AddSingleton<XeroTokenService>();
 builder.Services.AddSingleton<XeroResponseCache>();
 builder.Services.AddSingleton<XeroClient>();
@@ -42,8 +50,8 @@ builder.Services.AddSingleton<IAccessTokenStore>(serviceProvider => new StaticAc
 
 var app = builder.Build();
 
-// No HTTPS redirection: TLS ends at nginx, which Xero's redirect URI has to point at anyway (Xero accepts plain
-// HTTP for localhost only).
+// No HTTPS redirection: the callback arrives relayed by INTERA (or through a reverse proxy when Xero:RedirectUri is
+// set), and the plugin calls this service over the internal network.
 app.UseInteraApi(httpsRedirection: false);
 
 app.Run();

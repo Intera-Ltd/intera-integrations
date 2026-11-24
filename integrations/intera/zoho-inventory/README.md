@@ -6,7 +6,7 @@ Connects INTERA to a Zoho Inventory organization via a Zoho Self Client refresh 
 | --- | --- |
 | Catalog id | `intera.zoho-inventory` |
 | Runtime id | `intera-zoho-inventory-integration` |
-| Version | 3.3.0 |
+| Version | 3.3.1 |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
 | Deployment | Docker (`port: 8080`, `health_path: /health`) |

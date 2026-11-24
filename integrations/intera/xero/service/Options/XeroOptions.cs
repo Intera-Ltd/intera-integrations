@@ -20,11 +20,16 @@ public sealed class XeroOptions
     public string ClientSecret { get; set; } = string.Empty;
 
     /// <summary>
-    /// Must equal, character for character, a redirect URI registered on the Xero app. Xero accepts plain HTTP for
-    /// <c>localhost</c> only, so a deployment needs the public HTTPS name nginx serves — e.g.
-    /// <c>https://xero.example.com/oauth/callback</c>.
+    /// Explicit redirect URI override (e.g. <c>https://xero.example.com/oauth/callback</c> or
+    /// <c>http://localhost:8110/oauth/callback</c>). Leave empty to relay OAuth redirects automatically through
+    /// INTERA Core's webhook address (<c>PUT /oauth/redirect-uri</c>, persisted in <see cref="RedirectUriFilePath"/>).
     /// </summary>
     public string RedirectUri { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Path (relative to the app base directory unless rooted) of the file storing the redirect URL registered by INTERA.
+    /// </summary>
+    public string RedirectUriFilePath { get; set; } = "App_Data/xero-redirect-uri.json";
 
     /// <summary>
     /// Space- or comma-separated OAuth scopes. Apps created after 2 March 2026 can only be granted Xero's granular scopes, which is why
@@ -68,7 +73,7 @@ public sealed class XeroOptions
     public int PageSize { get; set; } = 1000;
 
     /// <summary>A read that would page past this many records is refused as too broad rather than truncated.</summary>
-    public int MaxRowsPerRead { get; set; } = 100_000;
+    public int MaxRowsPerRead { get; set; } = 20_000;
 
     /// <summary>Concurrent calls to one organisation. Xero allows five; one is left for anything else using the app.</summary>
     public int MaxParallelRequests { get; set; } = 4;

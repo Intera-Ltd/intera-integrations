@@ -4,6 +4,13 @@ All notable changes to this integration are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 version follows [Semantic Versioning](https://semver.org/).
 
+## [3.2.1] - 2026-11-23
+
+### Fixed
+
+- Bounded the in-process response cache to 1,000 entries and 16 MiB with eager expired sweeps and oldest-entry eviction.
+- Enforced `https:` on API base URLs (allowing `http:` only on loopback `localhost`, `127.0.0.1`, `[::1]`) and rejected URL userinfo and fragments.
+
 ## [3.2.0] - 2026-11-21
 
 ### Added

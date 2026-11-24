@@ -1,3 +1,4 @@
+using Intera.Common.Infrastructure.Http;
 using Intera.Jira.Api.Infrastructure;
 using Intera.Jira.Api.Options;
 using Intera.Jira.Api.Services;
@@ -64,7 +65,8 @@ public sealed class JiraClient(
             SitesLifetime,
             async ct =>
             {
-                var response = await SendAsync(HttpMethod.Get, Options.AccessibleResourcesUrl, null, siteId: null, ct).ConfigureAwait(false);
+                var accessibleResourcesUri = HttpsUriValidator.RequireHttpsOrLoopback(Options.AccessibleResourcesUrl, "Jira:AccessibleResourcesUrl");
+                var response = await SendAsync(HttpMethod.Get, accessibleResourcesUri.AbsoluteUri, null, siteId: null, ct).ConfigureAwait(false);
                 var sites = new List<JiraSite>();
 
                 var resources = response.Root.ValueKind == JsonValueKind.Array ? response.Root.EnumerateArray().ToList() : [];
@@ -485,7 +487,8 @@ public sealed class JiraClient(
 
     private string BuildUrl(JiraSite site, string path, IReadOnlyList<KeyValuePair<string, string>>? query)
     {
-        var url = $"{Options.ApiGatewayUrl.TrimEnd('/')}/ex/jira/{Uri.EscapeDataString(site.Id)}/{path.TrimStart('/')}";
+        var gatewayUri = HttpsUriValidator.RequireHttpsOrLoopback(Options.ApiGatewayUrl, "Jira:ApiGatewayUrl");
+        var url = $"{gatewayUri.AbsoluteUri.TrimEnd('/')}/ex/jira/{Uri.EscapeDataString(site.Id)}/{path.TrimStart('/')}";
 
         if (query is null || query.Count == 0)
         {

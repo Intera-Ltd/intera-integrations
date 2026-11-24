@@ -14,12 +14,6 @@ public sealed class ZendeskAuthorizationException(string message) : Exception(me
 /// </summary>
 public class ZendeskRequestException(string message) : Exception(message);
 
-/// <summary>
-/// INTERA registered a redirect URL while the deployment sets its own (<c>Zendesk:RedirectUri</c>), and the two differ.
-/// Surfaces as <b>409</b>: neither side is wrong on its own, and the deployment's value wins until it is removed.
-/// </summary>
-public sealed class ZendeskRedirectUriConflictException(string message) : Exception(message);
-
 /// <summary>Zendesk's rate limit, past what is worth waiting out inside one request. Surfaces as <b>429</b>.</summary>
 public sealed class ZendeskRateLimitException(string message, TimeSpan? retryAfter) : Exception(message)
 {

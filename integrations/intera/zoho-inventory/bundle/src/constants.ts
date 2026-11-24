@@ -1,6 +1,6 @@
 export const INTEGRATION_ID = 'intera-zoho-inventory-integration';
 export const INTEGRATION_NAME = 'Zoho Inventory';
-export const INTEGRATION_VERSION = '3.3.0';
+export const INTEGRATION_VERSION = '3.3.1';
 
 export const DIRECT_API_KIND = 'direct_api';
 export const DATA_SOURCE_CAPABILITY = 'datasource';

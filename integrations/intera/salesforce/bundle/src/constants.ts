@@ -1,6 +1,6 @@
 export const INTEGRATION_ID = 'intera-salesforce-integration';
 export const INTEGRATION_NAME = 'Salesforce';
-export const INTEGRATION_VERSION = '3.2.0';
+export const INTEGRATION_VERSION = '3.2.1';
 
 export const DIRECT_API_KIND = 'direct_api';
 export const DATA_SOURCE_CAPABILITY = 'datasource';

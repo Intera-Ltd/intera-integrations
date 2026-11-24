@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { validateApiUrl } from '../config';
 import {
   ASANA_API_BASE_URL,
   CACHE_TTL_MS,
@@ -105,8 +106,16 @@ function gateFor(tokenHash: string): Gate {
   return gate;
 }
 
-function buildUrl(path: string, query: AsanaQuery): string {
-  const url = new URL(`${ASANA_API_BASE_URL}${path}`);
+function buildUrl(
+  baseUrl: string,
+  baseOrigin: string,
+  path: string,
+  query: AsanaQuery,
+): string {
+  const url = new URL(`${baseUrl}${path}`);
+  if (url.origin !== baseOrigin || url.username !== '' || url.password !== '') {
+    throw new AsanaApiError(400, `Asana request path left configured API origin: ${path}`);
+  }
   for (const [name, value] of Object.entries(query)) {
     if (value !== undefined) {
       url.searchParams.set(name, String(value));
@@ -124,11 +133,18 @@ function buildUrl(path: string, query: AsanaQuery): string {
  * (see `awaitWithSignal`), and the read itself is bounded by {@link REQUEST_TIMEOUT_MS} per request and the retry cap.
  */
 export class AsanaClient {
+  private readonly baseUrl: string;
+  private readonly baseOrigin: string;
   private readonly tokenHash: string;
   private readonly gate: Gate;
 
-  constructor(private readonly token: string) {
-    this.tokenHash = createHash('sha256').update(token).digest('hex');
+  constructor(
+    private readonly token: string,
+    baseUrl = ASANA_API_BASE_URL,
+  ) {
+    this.baseUrl = validateApiUrl(baseUrl, 'Asana API base URL');
+    this.baseOrigin = new URL(this.baseUrl).origin;
+    this.tokenHash = createHash('sha256').update(`${this.baseUrl}|${token}`).digest('hex');
     this.gate = gateFor(this.tokenHash);
   }
 
@@ -178,7 +194,7 @@ export class AsanaClient {
    * the quota too, so the number of attempts is capped rather than retried until it works.
    */
   private async request(path: string, query: AsanaQuery): Promise<AsanaObject> {
-    const url = buildUrl(path, query);
+    const url = buildUrl(this.baseUrl, this.baseOrigin, path, query);
     for (let attempt = 0; ; attempt++) {
       const outcome = await this.gate.run(() => this.send(url));
       if ('error' in outcome) {

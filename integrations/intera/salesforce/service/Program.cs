@@ -10,7 +10,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInteraApi("Intera.Salesforce.Api");
 
-builder.Services.Configure<SalesforceOptions>(builder.Configuration.GetSection(SalesforceOptions.SectionName));
+builder.Services
+    .AddOptions<SalesforceOptions>()
+    .Bind(builder.Configuration.GetSection(SalesforceOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<SalesforceOptions>, SalesforceOptionsValidator>();
 
 builder.Services.AddHttpClient<IJsonHttpClient, JsonHttpClient>((serviceProvider, httpClient) =>
 {

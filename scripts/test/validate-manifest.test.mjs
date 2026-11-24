@@ -181,3 +181,10 @@ test('no license field and no LICENSE file is a warning', () => {
   assert.deepEqual(problems, []);
   assert.match(warnings[0], /Apache-2.0 applies/);
 });
+
+test('ghcr.io/intera-ltd images require the developer namespace', () => {
+  assert.deepEqual(check({ image: `ghcr.io/intera-ltd/acme/billing@sha256:${DIGEST}` }).problems, []);
+  const { problems } = check({ image: `ghcr.io/intera-ltd/billing@sha256:${DIGEST}` });
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /must include the developer namespace/);
+});

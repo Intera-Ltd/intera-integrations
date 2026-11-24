@@ -107,6 +107,19 @@ export function normalizePrivateKey(raw: string): string {
   return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----\n`;
 }
 
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+function isLoopbackHostname(hostname: string): boolean {
+  return LOOPBACK_HOSTNAMES.has(hostname.toLowerCase());
+}
+
+function hasAuthorityUserinfo(rawUrl: string, protocol: string): boolean {
+  const rest = rawUrl.slice(protocol.length + 2);
+  const boundary = rest.search(/[/?#]/);
+  const authority = boundary < 0 ? rest : rest.slice(0, boundary);
+  return authority.includes('@');
+}
+
 function readApiUrl(configJson: Record<string, unknown>): string {
   const value = readString(configJson, API_URL_CONFIG_FIELD);
   if (value === undefined) {
@@ -116,10 +129,23 @@ function readApiUrl(configJson: Record<string, unknown>): string {
   try {
     url = new URL(value);
   } catch {
-    throw new Error(`Config field "${API_URL_CONFIG_FIELD}" is not a URL: ${value}`);
+    throw new Error(`Config field "${API_URL_CONFIG_FIELD}" is not a valid URL`);
   }
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new Error(`Config field "${API_URL_CONFIG_FIELD}" must be an http(s) URL: ${value}`);
+    throw new Error(
+      `Config field "${API_URL_CONFIG_FIELD}" must be an https URL (http(s) URL is only allowed on loopback)`,
+    );
+  }
+  if (url.protocol === 'http:' && !isLoopbackHostname(url.hostname)) {
+    throw new Error(
+      `Config field "${API_URL_CONFIG_FIELD}" must use https (plain http is only allowed for loopback hosts localhost, 127.0.0.1, [::1])`,
+    );
+  }
+  if (url.username !== '' || url.password !== '' || hasAuthorityUserinfo(value, url.protocol)) {
+    throw new Error(`Config field "${API_URL_CONFIG_FIELD}" must not contain userinfo credentials`);
+  }
+  if (url.hash !== '' || value.includes('#')) {
+    throw new Error(`Config field "${API_URL_CONFIG_FIELD}" must not contain a URL fragment`);
   }
   return url.toString().replace(/\/+$/, '');
 }

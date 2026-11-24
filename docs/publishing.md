@@ -31,16 +31,19 @@ Actions tab:
 1. checks the tag against the folder and the manifest;
 2. builds and tests the bundle;
 3. builds the service image for `linux/amd64` and `linux/arm64` and pushes
-   `ghcr.io/intera-ltd/<integration>:<version>`;
+   `ghcr.io/intera-ltd/<developer>/<integration>:<version>`;
 4. writes the pushed digest into the packed manifest
-   (`deployment.image: ghcr.io/intera-ltd/<integration>@sha256:...`);
+   (`deployment.image: ghcr.io/intera-ltd/<developer>/<integration>@sha256:...`);
 5. packs `<developer>-<integration>-<version>.tar.gz` (`manifest.yaml` +
    `dist/`) and attaches it to a GitHub release, with the digest in the
    release notes and the job summary. The archive is the plugin folder that
    `intera-library publish` takes (step 3).
 
 It uses only the built-in `GITHUB_TOKEN`. The manifest in the repository
-keeps the placeholder digest; the release asset is the source of truth.
+keeps the placeholder digest; the release asset is the source of truth. New
+GHCR packages default to private — after the first release of a service
+integration, switch its GHCR package visibility to **Public** so installation
+agents do not fail with `INTEGRATION_AGENT_IMAGE_PULL_DENIED`.
 
 ## 3. Catalog
 
@@ -63,7 +66,7 @@ tar -xzf acme-billing-1.2.0.tar.gz -C out/acme-billing-1.2.0
 
 # b) from this repository, with the digest of an image you pushed
 scripts/pack.sh integrations/acme/billing \
-  --image ghcr.io/intera-ltd/billing@sha256:<64 hex> --release \
+  --image ghcr.io/intera-ltd/acme/billing@sha256:<64 hex> --release \
   --stage-dir out/acme-billing-1.2.0
 ```
 

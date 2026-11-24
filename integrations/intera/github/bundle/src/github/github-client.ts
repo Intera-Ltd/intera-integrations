@@ -2,8 +2,10 @@ import { createHash, sign } from 'node:crypto';
 import type { IAppCredential, IGitHubConfig } from '../config';
 import {
   CACHE_TTL_MS,
+  CONDITIONAL_CACHE_TTL_MS,
   GITHUB_API_VERSION,
   INSTALLATION_TOKEN_REFRESH_MARGIN_MS,
+  MAX_CONDITIONAL_BYTES,
   MAX_CONDITIONAL_ENTRIES,
   MAX_PARALLEL_REQUESTS,
   MAX_RECORDS_PER_LIST,
@@ -12,7 +14,7 @@ import {
   PAGE_SIZE,
   REQUEST_TIMEOUT_MS,
 } from '../constants';
-import { cached } from './response-cache';
+import { cached, estimateBytes, type IResponseCacheStats } from './response-cache';
 
 export type GitHubObject = Record<string, unknown>;
 export type GitHubQuery = Record<string, string | number | boolean | undefined>;
@@ -150,35 +152,121 @@ function gateFor(credentialHash: string): Gate {
 
 /**
  * Validators of pages already read, for conditional requests. Keyed by the credential and the URL, so one
- * instance's validator is never offered with another's token. Insertion order is age: a hit moves an entry to the
- * end, and past {@link MAX_CONDITIONAL_ENTRIES} the oldest is dropped.
+ * instance's validator is never offered with another's token. Bounded by {@link CONDITIONAL_CACHE_TTL_MS},
+ * {@link MAX_CONDITIONAL_ENTRIES}, and {@link MAX_CONDITIONAL_BYTES}, with expired and oldest entries evicted eagerly.
  */
 interface IConditionalEntry {
   etag: string;
   body: unknown;
   next: string | undefined;
+  expiresAt: number;
+  bytes: number;
 }
 
 const conditionalEntries = new Map<string, IConditionalEntry>();
+let conditionalTotalBytes = 0;
 
-function rememberConditional(key: string, entry: IConditionalEntry): void {
-  conditionalEntries.delete(key);
-  conditionalEntries.set(key, entry);
-  if (conditionalEntries.size > MAX_CONDITIONAL_ENTRIES) {
-    const oldest = conditionalEntries.keys().next().value;
-    if (oldest !== undefined) conditionalEntries.delete(oldest);
+function sweepConditional(now: number): void {
+  for (const [key, entry] of conditionalEntries) {
+    if (entry.expiresAt <= now) {
+      conditionalEntries.delete(key);
+      conditionalTotalBytes -= entry.bytes;
+    }
   }
 }
 
-/** The `rel="next"` target of a `Link` header, absolute as GitHub sends it. */
-function nextLink(header: string | null): string | undefined {
+function readConditional(key: string): IConditionalEntry | undefined {
+  const entry = conditionalEntries.get(key);
+  if (entry === undefined) {
+    return undefined;
+  }
+  if (entry.expiresAt <= Date.now()) {
+    conditionalEntries.delete(key);
+    conditionalTotalBytes -= entry.bytes;
+    return undefined;
+  }
+  return entry;
+}
+
+function rememberConditional(
+  key: string,
+  value: { etag: string; body: unknown; next: string | undefined },
+): void {
+  const now = Date.now();
+  sweepConditional(now);
+
+  const existing = conditionalEntries.get(key);
+  if (existing !== undefined) {
+    conditionalEntries.delete(key);
+    conditionalTotalBytes -= existing.bytes;
+  }
+
+  const bytes =
+    Buffer.byteLength(key, 'utf8') +
+    Buffer.byteLength(value.etag, 'utf8') +
+    (value.next !== undefined ? Buffer.byteLength(value.next, 'utf8') : 0) +
+    estimateBytes(value.body);
+
+  if (bytes > MAX_CONDITIONAL_BYTES) {
+    return;
+  }
+
+  conditionalEntries.set(key, {
+    etag: value.etag,
+    body: value.body,
+    next: value.next,
+    expiresAt: now + CONDITIONAL_CACHE_TTL_MS,
+    bytes,
+  });
+  conditionalTotalBytes += bytes;
+
+  while (
+    conditionalEntries.size > MAX_CONDITIONAL_ENTRIES ||
+    conditionalTotalBytes > MAX_CONDITIONAL_BYTES
+  ) {
+    const oldestKey = conditionalEntries.keys().next().value;
+    if (oldestKey === undefined) {
+      break;
+    }
+    const oldest = conditionalEntries.get(oldestKey);
+    conditionalEntries.delete(oldestKey);
+    if (oldest !== undefined) {
+      conditionalTotalBytes -= oldest.bytes;
+    }
+  }
+}
+
+export function getConditionalCacheStats(): IResponseCacheStats {
+  return { entries: conditionalEntries.size, bytes: conditionalTotalBytes };
+}
+
+export function clearConditionalCache(): void {
+  conditionalEntries.clear();
+  conditionalTotalBytes = 0;
+}
+
+/** The `rel="next"` target of a `Link` header, accepted only when it stays on `expectedOrigin`. */
+function nextLink(header: string | null, expectedOrigin: string): string | undefined {
   if (header === null) {
     return undefined;
   }
   for (const part of header.split(',')) {
     const match = /<([^>]+)>\s*;\s*rel="next"/.exec(part);
     if (match !== null) {
-      return match[1];
+      const candidate = match[1];
+      let parsed: URL;
+      try {
+        parsed = new URL(candidate);
+      } catch {
+        throw new GitHubApiError(502, 'GitHub returned an invalid pagination Link URL');
+      }
+      if (parsed.origin !== expectedOrigin || parsed.username !== '' || parsed.password !== '') {
+        throw new GitHubApiError(
+          502,
+          `GitHub returned a pagination Link URL outside ${expectedOrigin}`,
+        );
+      }
+      return candidate;
     }
   }
   return undefined;
@@ -436,9 +524,10 @@ export class GitHubClient {
    */
   private async request(url: string): Promise<{ body: unknown; next: string | undefined }> {
     const conditionalKey = `${this.credentialHash}|${url}`;
+    const apiOrigin = new URL(this.config.apiUrl).origin;
     let refreshedToken = false;
     for (let attempt = 0; ; attempt++) {
-      const known = conditionalEntries.get(conditionalKey);
+      const known = readConditional(conditionalKey);
       const authorization = await this.authorization();
       const outcome = await this.gate.run(() => this.send(url, authorization, known?.etag));
       if ('error' in outcome) {
@@ -453,12 +542,16 @@ export class GitHubClient {
       this.noteRateLimit(response);
       if (response.status === 304 && known !== undefined) {
         await response.text().catch(() => '');
-        rememberConditional(conditionalKey, known);
+        rememberConditional(conditionalKey, {
+          etag: response.headers.get('etag') ?? known.etag,
+          body: known.body,
+          next: known.next,
+        });
         return { body: known.body, next: known.next };
       }
       if (response.ok) {
         const body = await response.json();
-        const next = nextLink(response.headers.get('link'));
+        const next = nextLink(response.headers.get('link'), apiOrigin);
         const etag = response.headers.get('etag');
         if (etag !== null) {
           rememberConditional(conditionalKey, { etag, body, next });

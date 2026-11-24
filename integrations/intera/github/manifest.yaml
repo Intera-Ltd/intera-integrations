@@ -2,7 +2,7 @@
 # Reference: docs/manifest-reference.md
 id: intera.github
 name: GitHub
-version: '3.2.0'
+version: '3.2.1'
 runtime_id: intera-github-integration
 developer:
   id: intera

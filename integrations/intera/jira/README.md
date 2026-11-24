@@ -1,12 +1,12 @@
 # Jira
 
-Connects INTERA to Jira Cloud via Atlassian OAuth 2.0 (3LO) with rotating refresh-token keep-alive, JQL pushdown, and custom-field discovery through a companion .NET 10 service.
+Connects INTERA to Jira Cloud via Atlassian OAuth 2.0 (3LO, relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint) with rotating refresh-token keep-alive, JQL pushdown, and custom-field discovery through a companion .NET 10 service.
 
 | | |
 | --- | --- |
 | Catalog id | `intera.jira` |
 | Runtime id | `intera-jira-integration` |
-| Version | 3.2.0 |
+| Version | 3.3.0 |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
 | Deployment | Docker (`port: 8080`, `health_path: /health`) |
@@ -17,7 +17,7 @@ Connects INTERA to Jira Cloud via Atlassian OAuth 2.0 (3LO) with rotating refres
 | --- | --- | --- | --- | --- |
 | `client_id` | `JIRA__CLIENTID` | `string` | yes | Atlassian 3LO app Client ID |
 | `client_secret` | `JIRA__CLIENTSECRET` | `secret` | yes | Atlassian 3LO app Client Secret |
-| `redirect_uri` | `JIRA__REDIRECTURI` | `string` | yes | Registered OAuth callback URL (`https://<host>/oauth/callback`) |
+| `redirect_uri` | `JIRA__REDIRECTURI` | `string` | no | Optional callback URL override (empty relays OAuth redirects through INTERA Core's webhook address) |
 | `site_url` | `JIRA__SITEURL` | `string` | no | Default Jira site URL or Cloud ID |
 | `jql_scope` | `JIRA__JQLSCOPE` | `string` | no | Deployment-wide JQL restriction |
 | `issue_custom_fields` | `JIRA__ISSUECUSTOMFIELDS` | `string` | no | Custom fields included on `jira_issues` (`*` or comma-separated IDs/names) |

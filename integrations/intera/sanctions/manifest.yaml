@@ -2,7 +2,7 @@
 # Reference: docs/manifest-reference.md
 id: intera.sanctions
 name: SanctionsCheck
-version: '1.2.0'
+version: '1.2.1'
 runtime_id: intera-sanctions-integration
 developer:
   id: intera

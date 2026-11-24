@@ -2,7 +2,7 @@
 # Reference: docs/manifest-reference.md
 id: intera.hello-dotnet
 name: Hello .NET
-version: '1.0.0'
+version: '1.0.1'
 runtime_id: hello_dotnet          # equals manifest.id inside the bundle
 developer:
   id: intera
@@ -18,7 +18,7 @@ deployment:
   type: docker
   # Placeholder digest: CI (or scripts/set-image-digest.sh) writes the real one
   # into the packaged manifest after the image is built and pushed.
-  image: ghcr.io/intera-ltd/hello-dotnet@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  image: ghcr.io/intera-ltd/intera/hello-dotnet@sha256:0000000000000000000000000000000000000000000000000000000000000000
   port: 8080
   health_path: /health
   env:

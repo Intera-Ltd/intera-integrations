@@ -183,12 +183,21 @@ public sealed class ZohoOAuthService(
     {
         if (!string.IsNullOrWhiteSpace(Options.ApiBaseUrl))
         {
-            return Options.ApiBaseUrl.TrimEnd('/');
+            return HttpsUriValidator.RequireHttpsOrLoopback(Options.ApiBaseUrl, "ZohoInventory:ApiBaseUrl")
+                .AbsoluteUri.TrimEnd('/');
         }
 
-        return !string.IsNullOrWhiteSpace(response.ApiDomain)
-            ? $"{response.ApiDomain.TrimEnd('/')}/inventory/v1"
-            : ZohoDataCenter.ResolveDefaultApiBaseUrl(Options);
+        if (!string.IsNullOrWhiteSpace(response.ApiDomain))
+        {
+            var domain = HttpsUriValidator.RequireHttpsOrLoopback(response.ApiDomain, "Zoho token response api_domain")
+                .AbsoluteUri.TrimEnd('/');
+            return $"{domain}/inventory/v1";
+        }
+
+        return HttpsUriValidator.RequireHttpsOrLoopback(
+                ZohoDataCenter.ResolveDefaultApiBaseUrl(Options),
+                "ZohoInventory:ApiBaseUrl")
+            .AbsoluteUri.TrimEnd('/');
     }
 
     /// <summary>

@@ -6,7 +6,7 @@ Connects INTERA to Salesforce CRM via an OAuth 2.0 client-credentials Connected 
 | --- | --- |
 | Catalog id | `intera.salesforce` |
 | Runtime id | `intera-salesforce-integration` |
-| Version | 3.2.0 |
+| Version | 3.2.1 |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
 | Deployment | Docker (`port: 8080`, `health_path: /health`) |

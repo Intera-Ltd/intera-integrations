@@ -27,9 +27,6 @@ public sealed record ZendeskOAuthStatus(
     string RedirectUri,
     string? RedirectUriSource);
 
-/// <summary>The redirect URL in effect and where it came from (see <see cref="ZendeskOAuthStatus.RedirectUriSource"/>).</summary>
-public sealed record ZendeskRedirectUriState(string? RedirectUri, string? Source);
-
 /// <summary>
 /// The deployment's one Zendesk grant: the OAuth 2.0 authorization-code flow that creates it, and the refresh that
 /// keeps it. The same shape as <c>JiraTokenService</c> and <c>XeroTokenService</c>, which it was copied from.
@@ -64,13 +61,10 @@ public sealed record ZendeskRedirectUriState(string? RedirectUri, string? Source
 public sealed class ZendeskTokenService(
     IOptionsMonitor<ZendeskOptions> options,
     IOAuthTokenStore tokenStore,
-    IZendeskRedirectUriStore redirectUriStore,
+    IOAuthRedirectUriStore redirectUriStore,
     IHttpClientFactory httpClientFactory,
     ILogger<ZendeskTokenService> logger)
 {
-    private const string ConfigurationSource = "configuration";
-    private const string InteraSource = "intera";
-
     private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(15);
 
     private readonly SemaphoreSlim refreshGate = new(1, 1);
@@ -111,42 +105,44 @@ public sealed class ZendeskTokenService(
     }
 
     /// <summary>The redirect URL a sign-in would use now: the deployment's own if set, otherwise the one INTERA registered.</summary>
-    public async Task<ZendeskRedirectUriState> GetRedirectUriAsync(CancellationToken cancellationToken)
+    public async Task<OAuthRedirectUriState> GetRedirectUriAsync(CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(Options.RedirectUri))
         {
-            return new ZendeskRedirectUriState(Options.RedirectUri.Trim(), ConfigurationSource);
+            return new OAuthRedirectUriState(Options.RedirectUri.Trim(), OAuthRedirectUriState.ConfigurationSource);
         }
 
         var registered = await redirectUriStore.GetAsync(cancellationToken).ConfigureAwait(false);
-        return registered is null ? new ZendeskRedirectUriState(null, null) : new ZendeskRedirectUriState(registered, InteraSource);
+        return registered is null
+            ? new OAuthRedirectUriState(null, null)
+            : new OAuthRedirectUriState(registered, OAuthRedirectUriState.InteraSource);
     }
 
     /// <summary>
     /// Stores the redirect URL INTERA registered (the plugin's <c>registerWebhook</c>). Refused when the deployment sets a
     /// different one, so a registration cannot silently lose to configuration; the same value is accepted as a no-op.
     /// </summary>
-    public async Task<ZendeskRedirectUriState> RegisterRedirectUriAsync(string? redirectUri, CancellationToken cancellationToken)
+    public async Task<OAuthRedirectUriState> RegisterRedirectUriAsync(string? redirectUri, CancellationToken cancellationToken)
     {
-        var validated = ZendeskRedirectUri.Validate(redirectUri);
+        var validated = OAuthRedirectUriValidator.Validate(redirectUri);
 
         if (!string.IsNullOrWhiteSpace(Options.RedirectUri))
         {
             var configured = Options.RedirectUri.Trim();
             if (!string.Equals(configured, validated, StringComparison.Ordinal))
             {
-                throw new ZendeskRedirectUriConflictException(
-                    $"This deployment sets its own redirect URL ({configured}), so INTERA's address ({validated}) is not used. "
-                    + "Remove ZENDESK_REDIRECT_URI from .env and redeploy to let INTERA relay the sign-in.");
+                throw new OAuthRedirectUriConflictException(
+                    $"This deployment configures its own redirect URL ({configured}), so INTERA's callback address ({validated}) is not used. "
+                    + "Clear ZENDESK__REDIRECTURI and redeploy to let INTERA relay the sign-in.");
             }
 
-            return new ZendeskRedirectUriState(configured, ConfigurationSource);
+            return new OAuthRedirectUriState(configured, OAuthRedirectUriState.ConfigurationSource);
         }
 
         await redirectUriStore.SaveAsync(validated, cancellationToken).ConfigureAwait(false);
         logger.LogInformation("Redirect URL registered by INTERA: {RedirectUri}.", validated);
 
-        return new ZendeskRedirectUriState(validated, InteraSource);
+        return new OAuthRedirectUriState(validated, OAuthRedirectUriState.InteraSource);
     }
 
     public async Task ExchangeAuthorizationCodeAsync(string code, string? state, CancellationToken cancellationToken)

@@ -1,4 +1,5 @@
 using Intera.Common.Controllers;
+using Intera.Common.Infrastructure.OAuth;
 using Intera.Common.Infrastructure.Query;
 using Intera.Common.Models.Query;
 using Intera.Xero.Api.Infrastructure;
@@ -74,6 +75,9 @@ public abstract class XeroControllerBase : ApiControllerBase
 
             case XeroRequestException or ArgumentException:
                 return controller.BadRequest(ApiResponse<object?>.Fail(exception.Message));
+
+            case OAuthRedirectUriConflictException:
+                return controller.Conflict(ApiResponse<object?>.Fail(exception.Message));
 
             case XeroRateLimitException rateLimit:
                 if (rateLimit.RetryAfter is { } wait)

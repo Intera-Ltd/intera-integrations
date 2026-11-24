@@ -1,3 +1,4 @@
+import { resolveConfigUrl } from '../config';
 import {
   EU_FSF_XML_URL,
   EU_LIST_URL_CONFIG_FIELD,
@@ -42,36 +43,11 @@ export const EU_SANCTIONS_LIST: ISanctionsListDefinition = {
   name: EU_SANCTIONS_SOURCE_NAME,
   description: EU_SANCTIONS_SOURCE_DESCRIPTION,
   fields: EU_FIELDS,
-  resolveUrl: (config) => readUrl(config, EU_LIST_URL_CONFIG_FIELD, EU_FSF_XML_URL),
+  resolveUrl: (config) => resolveConfigUrl(config, EU_LIST_URL_CONFIG_FIELD, EU_FSF_XML_URL),
   load: loadEuList,
 };
 
 export const SANCTIONS_LISTS: ISanctionsListDefinition[] = [EU_SANCTIONS_LIST];
-
-function readUrl(
-  config: Record<string, unknown> | undefined,
-  field: string,
-  fallback: string,
-): string {
-  const raw = config?.[field];
-  if (raw === undefined || raw === null) {
-    return fallback;
-  }
-  const text = String(raw).trim();
-  if (text.length === 0) {
-    return fallback;
-  }
-  let parsed: URL;
-  try {
-    parsed = new URL(text);
-  } catch {
-    throw new Error(`Config field "${field}" is not a valid URL`);
-  }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new Error(`Config field "${field}" must be an http(s) URL`);
-  }
-  return text;
-}
 
 export function loadList(
   list: ISanctionsListDefinition,

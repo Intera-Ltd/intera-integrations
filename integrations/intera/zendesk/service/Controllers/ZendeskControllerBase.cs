@@ -1,4 +1,5 @@
 using Intera.Common.Controllers;
+using Intera.Common.Infrastructure.OAuth;
 using Intera.Common.Infrastructure.Query;
 using Intera.Common.Models.Query;
 using Intera.Zendesk.Api.Infrastructure;
@@ -66,7 +67,7 @@ public abstract class ZendeskControllerBase : ApiControllerBase
             case ZendeskRequestException or ArgumentException:
                 return controller.BadRequest(ApiResponse<object?>.Fail(exception.Message));
 
-            case ZendeskRedirectUriConflictException:
+            case OAuthRedirectUriConflictException:
                 return controller.Conflict(ApiResponse<object?>.Fail(exception.Message));
 
             case ZendeskRateLimitException rateLimit:

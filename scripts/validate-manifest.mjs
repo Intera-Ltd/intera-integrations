@@ -137,10 +137,25 @@ export function checkManifest(manifest, problems, warnings, { release }) {
   }
   if (manifest.runtime_id === undefined) fail('runtime_id', 'is required to install an integration from Marketplace');
   if (typeof deployment.image !== 'string' || !IMAGE.test(deployment.image)) {
-    fail('deployment.image', `must be an image pinned by digest, e.g. ghcr.io/acme/billing@sha256:<64 hex>; got ${show(deployment.image)}`);
-  } else if (deployment.image.endsWith(PLACEHOLDER_DIGEST)) {
-    if (release) fail('deployment.image', 'still has the placeholder digest; run scripts/set-image-digest.sh');
-    else warnings.push('deployment.image: placeholder digest (CI writes the real one at release)');
+    fail('deployment.image', `must be an image pinned by digest, e.g. ghcr.io/intera-ltd/acme/billing@sha256:<64 hex>; got ${show(deployment.image)}`);
+  } else {
+    if (
+      deployment.image.startsWith('ghcr.io/intera-ltd/') &&
+      isRecord(manifest.developer) &&
+      typeof manifest.developer.id === 'string' &&
+      typeof manifest.id === 'string' &&
+      manifest.id.startsWith(`${manifest.developer.id}.`)
+    ) {
+      const slug = manifest.id.slice(manifest.developer.id.length + 1);
+      const expectedPrefix = `ghcr.io/intera-ltd/${manifest.developer.id}/${slug}@sha256:`;
+      if (!deployment.image.startsWith(expectedPrefix)) {
+        fail('deployment.image', `in ghcr.io/intera-ltd must include the developer namespace: "${expectedPrefix}<64 hex>"`);
+      }
+    }
+    if (deployment.image.endsWith(PLACEHOLDER_DIGEST)) {
+      if (release) fail('deployment.image', 'still has the placeholder digest; run scripts/set-image-digest.sh');
+      else warnings.push('deployment.image: placeholder digest (CI writes the real one at release)');
+    }
   }
   if (!Number.isInteger(deployment.port) || deployment.port < 1 || deployment.port > 65535) {
     fail('deployment.port', `must be an integer from 1 to 65535; got ${show(deployment.port)}`);
@@ -328,18 +343,15 @@ function listAll() {
   return dirs;
 }
 
-/** Image names are ghcr.io/intera-ltd/<integration>, so slugs must be unique. */
+/** Image names are ghcr.io/intera-ltd/<developer>/<integration>, scoped per developer. */
 function checkUniqueSlugs(failures) {
-  const owners = new Map();
+  const seen = new Set();
   for (const dir of listAll()) {
     const rel = path.relative(ROOT, dir).split(path.sep);
     if (rel[0] !== 'integrations') continue;
-    const list = owners.get(rel[2]) ?? [];
-    list.push(rel.join('/'));
-    owners.set(rel[2], list);
-  }
-  for (const [slug, dirs] of owners) {
-    if (dirs.length > 1) failures.push(`integration slug "${slug}" is used more than once: ${dirs.join(', ')}`);
+    const key = `${rel[1]}/${rel[2]}`;
+    if (seen.has(key)) failures.push(`integration folder "${key}" is listed more than once`);
+    seen.add(key);
   }
 }
 

@@ -51,7 +51,7 @@ export class AsanaReader {
   readonly client: AsanaClient;
 
   constructor(readonly config: IAsanaConfig) {
-    this.client = new AsanaClient(config.accessToken);
+    this.client = new AsanaClient(config.accessToken, config.apiUrl);
   }
 
   workspaces(): Promise<AsanaObject[]> {

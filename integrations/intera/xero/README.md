@@ -1,12 +1,12 @@
 # Xero
 
-Connects INTERA to Xero Accounting via OAuth 2.0 (with automatic rotating refresh-token keep-alive), exposing organisations, chart of accounts, contacts, invoices, bills, credit notes, payments, bank transactions, manual journals, budgets, and monthly/aged financial reports through a companion .NET 10 service.
+Connects INTERA to Xero Accounting via OAuth 2.0 (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint, with automatic rotating refresh-token keep-alive), exposing organisations, chart of accounts, contacts, invoices, bills, credit notes, payments, bank transactions, manual journals, budgets, and monthly/aged financial reports through a companion .NET 10 service.
 
 | | |
 | --- | --- |
 | Catalog id | `intera.xero` |
 | Runtime id | `intera-xero-integration` |
-| Version | 3.2.0 |
+| Version | 3.3.0 |
 | Integration Contract | 2 |
 | License | Apache-2.0 |
 | Deployment | Docker (`port: 8080`, `health_path: /health`) |
@@ -17,7 +17,7 @@ Connects INTERA to Xero Accounting via OAuth 2.0 (with automatic rotating refres
 | --- | --- | --- | --- | --- |
 | `client_id` | `XERO__CLIENTID` | `string` | yes | Xero developer app Client ID |
 | `client_secret` | `XERO__CLIENTSECRET` | `secret` | yes | Xero developer app Client Secret |
-| `redirect_uri` | `XERO__REDIRECTURI` | `string` | yes | Registered OAuth callback URL (`https://<host>/oauth/callback`) |
+| `redirect_uri` | `XERO__REDIRECTURI` | `string` | no | Optional redirect URI override (empty relays OAuth redirects through INTERA Core's webhook address) |
 | `tenant_id` | `XERO__TENANTID` | `string` | no | Default Xero organisation tenant ID |
 | `scopes` | `XERO__SCOPES` | `string` | no | Optional override for Xero read-only scopes |
 | `api_access_token` | `XERO__APIACCESSTOKEN` | `secret` | no | Optional inbound shared secret |

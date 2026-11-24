@@ -1,6 +1,6 @@
 export const INTEGRATION_ID = 'intera-asana-integration';
 export const INTEGRATION_NAME = 'Asana';
-export const INTEGRATION_VERSION = '3.2.0';
+export const INTEGRATION_VERSION = '3.2.1';
 
 export const DIRECT_API_KIND = 'direct_api' as const;
 export const DATA_SOURCE_CAPABILITY = 'datasource';
@@ -14,6 +14,7 @@ export const WORKSPACE_CONFIG_FIELD = 'workspace';
 export const PROJECTS_CONFIG_FIELD = 'projects';
 export const INCLUDE_ARCHIVED_CONFIG_FIELD = 'includeArchivedProjects';
 export const INCLUDE_SUBTASKS_CONFIG_FIELD = 'includeSubtasks';
+export const API_URL_CONFIG_FIELD = 'apiUrl';
 
 export const ASANA_API_BASE_URL = 'https://app.asana.com/api/1.0';
 
@@ -46,6 +47,10 @@ export const MAX_RETRIES = 4;
  */
 export const CACHE_TTL_MS = 120_000;
 export const REFERENCE_CACHE_TTL_MS = 900_000;
+
+/** Maximum entries and estimated UTF-8/JSON bytes retained in the response cache. */
+export const MAX_RESPONSE_CACHE_ENTRIES = 1_000;
+export const MAX_RESPONSE_CACHE_BYTES = 16 * 1024 * 1024;
 
 /**
  * Tasks one read may produce. Past it a read fails, never truncates — a count over a silently cut list looks exactly
