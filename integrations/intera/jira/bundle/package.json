@@ -1,7 +1,7 @@
 {
   "name": "@intera/intera-jira-integration",
   "private": true,
-  "version": "3.3.0",
+  "version": "3.4.0",
   "scripts": {
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').cpSync('assets','dist/assets',{recursive:true})\"",
     "test": "npm run build && node --test test/*.test.mjs",

@@ -48,11 +48,15 @@ function readTotalCountHeader(response: Response): number | null {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function describeFailure(status: number, bodyText: string, path: string): string {
+function redactSecret(message: string, secret: string): string {
+  return secret.length > 0 ? message.split(secret).join('[REDACTED]') : message;
+}
+
+function describeFailure(status: number, bodyText: string, path: string, secret: string): string {
   try {
     const parsed = JSON.parse(bodyText) as unknown;
     if (isRecord(parsed) && typeof parsed.error === 'string' && parsed.error.trim().length > 0) {
-      return `Salesforce API ${status} for ${path}: ${parsed.error.trim()}`;
+      return redactSecret(`Salesforce API ${status} for ${path}: ${parsed.error.trim()}`, secret);
     }
   } catch {
     // Ignore non-JSON body so raw upstream responses are never echoed.
@@ -61,10 +65,10 @@ function describeFailure(status: number, bodyText: string, path: string): string
   return `Salesforce API request failed with status ${status} for ${path}`;
 }
 
-function unwrapApiResponse<T>(response: ISalesforceApiResponse<T>, path: string): T {
+function unwrapApiResponse<T>(response: ISalesforceApiResponse<T>, path: string, secret: string): T {
   if (!response.ok) {
     const message = typeof response.error === 'string' && response.error.trim().length > 0
-      ? response.error.trim()
+      ? redactSecret(response.error.trim(), secret)
       : `Salesforce API returned ok=false for ${path}`;
     throw new Error(message);
   }
@@ -102,7 +106,7 @@ export class SalesforceClient {
 
   private async postEnvelopeData(apiPath: string, body: unknown, signal?: AbortSignal): Promise<unknown> {
     const { envelope, totalCount } = await this.requestEnvelope(apiPath, 'POST', body, signal);
-    const data = unwrapApiResponse(envelope, apiPath);
+    const data = unwrapApiResponse(envelope, apiPath, this.config.serviceToken);
 
     if (totalCount !== null && Array.isArray(data)) {
       return { rows: data, total: totalCount } satisfies IDataPage;
@@ -125,7 +129,7 @@ export class SalesforceClient {
       const headers: Record<string, string> = {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        ...(this.config.accessToken ? { Authorization: `Bearer ${this.config.accessToken}` } : {}),
+        Authorization: `Bearer ${this.config.serviceToken}`,
       };
 
       const response = await fetch(url, {
@@ -138,7 +142,7 @@ export class SalesforceClient {
       const bodyText = await response.text();
 
       if (!response.ok) {
-        throw new Error(describeFailure(response.status, bodyText, apiPath));
+        throw new Error(describeFailure(response.status, bodyText, apiPath, this.config.serviceToken));
       }
 
       if (bodyText.trim().length === 0) {
@@ -156,6 +160,9 @@ export class SalesforceClient {
       }
       if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
         throw new Error(`Salesforce API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS} ms for ${apiPath}`);
+      }
+      if (error instanceof Error) {
+        throw new Error(redactSecret(error.message, this.config.serviceToken));
       }
 
       throw error;

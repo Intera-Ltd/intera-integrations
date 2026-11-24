@@ -1,0 +1,68 @@
+# Catalog manifest of the Revolut Business integration.
+# Reference: docs/manifest-reference.md
+id: intera.revolut
+name: Revolut Business
+version: '3.5.0'
+runtime_id: intera-revolut-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.94'
+  integration_contract: 2
+categories: [banking, payment]
+roles: [financial, telecom, shipmanagement, logistics, manufacturing, marketplaces, farming, b2b]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/intera/revolut@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  data_path: /app/App_Data
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: client_id
+      label: Revolut OAuth Client ID
+      kind: string
+      required: true
+      env: REVOLUT__CLIENTID
+    - name: private_key_pem
+      label: RSA Private Key (PEM)
+      description: PEM-encoded RSA private key whose public certificate is uploaded in Revolut Business API settings
+      kind: secret
+      required: true
+      env: REVOLUT__PRIVATEKEYPEM
+    - name: client_assertion_issuer
+      label: JWT Client Assertion Issuer (iss)
+      description: Domain of your Redirect URI (without scheme), as required by Revolut JWT client assertions
+      kind: string
+      required: true
+      env: REVOLUT__CLIENTASSERTIONISSUER
+    - name: api_base_url
+      label: Revolut Business API Base URL
+      kind: string
+      default: 'https://b2b.revolut.com/api/1.0'
+      env: REVOLUT__APIBASEURL
+    - name: business_portal_base_url
+      label: Revolut Business Portal Base URL
+      kind: string
+      default: 'https://business.revolut.com'
+      env: REVOLUT__BUSINESSPORTALBASEURL
+    - name: oauth_endpoint
+      label: OAuth Endpoint
+      kind: string
+      default: 'https://b2b.revolut.com/api/1.0/auth/token'
+      env: REVOLUT__OAUTHENDPOINT
+    - name: redirect_uri
+      label: OAuth Redirect URI override
+      description: Leave empty to relay OAuth redirects automatically through INTERA Core's webhook address
+      kind: string
+      required: false
+      env: REVOLUT__REDIRECTURI
+    - name: transactions_lookback_days
+      label: Transactions Lookback Days
+      kind: number
+      default: 90
+      env: REVOLUT__TRANSACTIONSLOOKBACKDAYS

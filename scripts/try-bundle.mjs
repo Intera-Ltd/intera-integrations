@@ -18,12 +18,13 @@ const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     'service-url': { type: 'string' },
+    'service-token': { type: 'string' },
     config: { type: 'string', multiple: true, default: [] },
     limit: { type: 'string', default: '5' },
   },
 });
 if (positionals.length !== 1) {
-  console.error('usage: try-bundle.mjs <integration-dir> [--service-url <url>] [--config key=value]... [--limit N]');
+  console.error('usage: try-bundle.mjs <integration-dir> [--service-url <url>] [--service-token <token>] [--config key=value]... [--limit N]');
   process.exit(2);
 }
 
@@ -37,6 +38,7 @@ const config = Object.fromEntries(
   }),
 );
 if (values['service-url']) config.intera_service_url = values['service-url'];
+if (values['service-token']) config.intera_service_token = values['service-token'];
 
 console.log(`${bundle.manifest.id} ${bundle.manifest.version}`);
 let failed = false;

@@ -2,12 +2,12 @@
 # Reference: docs/manifest-reference.md
 id: intera.zendesk
 name: Zendesk
-version: '4.1.1'
+version: '4.2.0'
 runtime_id: intera-zendesk-integration
 developer:
   id: intera
 compatibility:
-  intera_min: '0.5.25'
+  intera_min: '0.5.94'
   integration_contract: 2
 categories: [customer-support, monitoring]
 roles: [telecom, logistics, manufacturing, financial, marketplaces]
@@ -19,6 +19,7 @@ deployment:
   image: ghcr.io/intera-ltd/intera/zendesk@sha256:0000000000000000000000000000000000000000000000000000000000000000
   port: 8080
   health_path: /health
+  data_path: /app/App_Data
   env:
     ASPNETCORE_HTTP_PORTS: '8080'
   settings:
@@ -65,9 +66,3 @@ deployment:
       kind: string
       default: 'read'
       env: ZENDESK__SCOPES
-    - name: api_access_token
-      label: Inbound service access token
-      description: Optional shared secret for standalone/external service deployments
-      kind: secret
-      required: false
-      env: ZENDESK__APIACCESSTOKEN

@@ -28,6 +28,7 @@ const INTERA_MAX = /^(?:0|[1-9]\d*)\.(?:(?:0|[1-9]\d*)\.(?:0|[1-9]\d*|x)|x)$/;
 const IMAGE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*(?::[0-9]+)?(?:\/[a-z0-9]+(?:[._-][a-z0-9]+)*)*@sha256:[a-f0-9]{64}$/;
 const PLACEHOLDER_DIGEST = `@sha256:${'0'.repeat(64)}`;
 const HEALTH_PATH = /^\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$/;
+const DATA_PATH = /^(?:\/(?!\.{1,2}(?:\/|$))[A-Za-z0-9._@+-]+)+$/;
 const ENV_NAME = /^[A-Z_][A-Z0-9_]*$/;
 const PROVIDES = /^((?:[a-z0-9]+(?:\.[a-z0-9]+)*)|(?:[a-z][a-z0-9_]*))@(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/;
 
@@ -35,13 +36,15 @@ const CONTRACT_VERSIONS = [2];
 const TOP_LEVEL = ['id', 'name', 'version', 'runtime_id', 'developer', 'compatibility', 'categories', 'roles', 'capabilities', 'license', 'provides', 'deployment'];
 const COMPATIBILITY = ['intera', 'intera_min', 'intera_max', 'integration_contract'];
 const CAPABILITIES = ['datasources', 'metrics', 'external_assets', 'widgets', 'writeback'];
-const DOCKER_KEYS = ['type', 'image', 'port', 'health_path', 'env', 'settings'];
+const DOCKER_KEYS = ['type', 'image', 'port', 'health_path', 'env', 'data_path', 'settings'];
 const SETTING_KEYS = ['name', 'label', 'description', 'kind', 'required', 'env', 'default'];
 const SETTING_KINDS = ['string', 'secret', 'number', 'boolean'];
 const SETTING_NAME = /^[a-z][a-z0-9_]{0,63}$/;
 // The installation agent passes setting values through the environment of the
 // docker CLI, so these names are taken.
 const RESERVED_SETTING_ENV = /^(?:PATH|HOME|DOCKER_.*)$/;
+const PLATFORM_ENV = /^INTERA_SERVICE_/;
+const MAX_DATA_PATH = 200;
 const MAX_SETTINGS = 30;
 const MAX_VARIABLES = 50; // deployment.env and deployment.settings together
 const MAX_ENV_VALUE = 4096;
@@ -163,6 +166,9 @@ export function checkManifest(manifest, problems, warnings, { release }) {
   if (deployment.health_path !== undefined && (typeof deployment.health_path !== 'string' || !HEALTH_PATH.test(deployment.health_path))) {
     fail('deployment.health_path', `must be an absolute path such as /health; got ${show(deployment.health_path)}`);
   }
+  if (deployment.data_path !== undefined && deployment.data_path !== null) {
+    text('deployment.data_path', deployment.data_path, DATA_PATH, MAX_DATA_PATH);
+  }
   const env = isRecord(deployment.env) ? deployment.env : {};
   if (deployment.env !== undefined) {
     if (!isRecord(deployment.env)) fail('deployment.env', 'must be a mapping');
@@ -170,8 +176,9 @@ export function checkManifest(manifest, problems, warnings, { release }) {
       if (Object.keys(env).length > MAX_VARIABLES) fail('deployment.env', `must have at most ${MAX_VARIABLES} variables`);
       for (const [name, value] of Object.entries(env)) {
         if (!ENV_NAME.test(name)) fail(`deployment.env.${name}`, 'must be an upper snake case name');
+        else if (PLATFORM_ENV.test(name)) fail(`deployment.env.${name}`, `${name} is reserved: INTERA_SERVICE_* are set by Core`);
         if (typeof value !== 'string' || value.length > MAX_ENV_VALUE) fail(`deployment.env.${name}`, `must be a quoted string of at most ${MAX_ENV_VALUE} characters`);
-        if (SECRET_NAME.test(name)) {
+        if (!PLATFORM_ENV.test(name) && SECRET_NAME.test(name)) {
           fail(`deployment.env.${name}`, 'looks like a secret; manifests are public: declare it in deployment.settings with kind: secret');
         }
       }
@@ -237,6 +244,9 @@ function checkSettings(settings, env, fail, warnings) {
     }
     if (variable !== null && RESERVED_SETTING_ENV.test(variable)) {
       fail(`${at}.env`, `${variable} is reserved (PATH, HOME and DOCKER_* are taken by the installation agent)`);
+      variable = null;
+    } else if (variable !== null && PLATFORM_ENV.test(variable)) {
+      fail(`${at}.env`, `${variable} is reserved: INTERA_SERVICE_* are set by Core`);
       variable = null;
     }
     if (SETTING_KINDS.includes(kind)) checkSettingDefault(setting, at, fail);

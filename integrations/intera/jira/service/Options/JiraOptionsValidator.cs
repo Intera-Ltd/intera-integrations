@@ -28,6 +28,9 @@ public sealed class JiraOptionsValidator : IValidateOptions<JiraOptions>
         ValidateHttpsUrl(options.ApiGatewayUrl, "Jira:ApiGatewayUrl", failures);
         ValidateHttpsUrl(options.AccessibleResourcesUrl, "Jira:AccessibleResourcesUrl", failures);
 
+        ValidateDataFilePath(options.OAuthTokenFilePath, "Jira:OAuthTokenFilePath", failures);
+        ValidateDataFilePath(options.RedirectUriFilePath, "Jira:RedirectUriFilePath", failures);
+
         if (!string.IsNullOrWhiteSpace(options.SiteUrl))
         {
             var site = options.SiteUrl.Trim();
@@ -73,6 +76,21 @@ public sealed class JiraOptionsValidator : IValidateOptions<JiraOptions>
         if (!HttpsUriValidator.TryValidateHttpsOrLoopback(url, out _, out var reason))
         {
             failures.Add($"{settingName} {reason}");
+        }
+    }
+
+    private static void ValidateDataFilePath(string? path, string settingName, List<string> failures)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            failures.Add($"{settingName} must be configured.");
+            return;
+        }
+
+        var segments = path.Trim().Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Any(segment => string.Equals(segment, "..", StringComparison.Ordinal)))
+        {
+            failures.Add($"{settingName} must not contain '..' path traversal segments.");
         }
     }
 }

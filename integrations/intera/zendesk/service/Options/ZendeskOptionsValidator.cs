@@ -31,6 +31,9 @@ public sealed class ZendeskOptionsValidator : IValidateOptions<ZendeskOptions>
             failures.Add(exception.Message);
         }
 
+        ValidateDataFilePath(options.OAuthTokenFilePath, "Zendesk:OAuthTokenFilePath", failures);
+        ValidateDataFilePath(options.RedirectUriFilePath, "Zendesk:RedirectUriFilePath", failures);
+
         if (!string.IsNullOrWhiteSpace(options.RedirectUri))
         {
             try
@@ -46,5 +49,20 @@ public sealed class ZendeskOptionsValidator : IValidateOptions<ZendeskOptions>
         return failures.Count == 0
             ? ValidateOptionsResult.Success
             : ValidateOptionsResult.Fail(failures);
+    }
+
+    private static void ValidateDataFilePath(string? path, string settingName, List<string> failures)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            failures.Add($"{settingName} must be configured.");
+            return;
+        }
+
+        var segments = path.Trim().Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Any(segment => string.Equals(segment, "..", StringComparison.Ordinal)))
+        {
+            failures.Add($"{settingName} must not contain '..' path traversal segments.");
+        }
     }
 }

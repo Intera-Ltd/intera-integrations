@@ -11,24 +11,19 @@ using System.Text.Json.Serialization;
 namespace Intera.Xero.Api.Controllers;
 
 /// <summary>
-/// Connecting this deployment to Xero: <c>GET /oauth/authorize-url</c> (authenticated) hands out a single-use link to
-/// Xero's consent page, Xero redirects back to <c>GET /oauth/callback</c> — through INTERA's webhook relay, whose
-/// address the plugin registers with <c>PUT /oauth/redirect-uri</c> — and the grant is stored and refreshed from
-/// then on. <c>GET /oauth/status</c> is unauthenticated so connection checks can read it.
+/// Connecting this deployment to Xero: <c>GET /oauth/authorize-url</c> hands out a single-use link to Xero's consent
+/// page, Xero redirects back to <c>GET /oauth/callback</c> — through INTERA's webhook relay, whose address the plugin
+/// registers with <c>PUT /oauth/redirect-uri</c> — and the grant is stored encrypted and refreshed from then on.
+/// Every route here requires <c>Authorization: Bearer &lt;INTERA_SERVICE_TOKEN&gt;</c>.
 /// </summary>
-/// <remarks>
-/// There is no unauthenticated <c>/oauth/login</c>: whoever starts the flow decides which
-/// Xero organisation the deployment reads, so starting it takes this API's access token — see
-/// <see cref="XeroTokenService"/>.
-/// </remarks>
 [ApiController]
 [Route("oauth")]
+[RequireAccessToken]
+[SwaggerManualToken]
 public sealed class OAuthController(XeroTokenService tokens) : ControllerBase
 {
     /// <summary>A link to open in a browser, valid once and for 15 minutes.</summary>
     [HttpGet("authorize-url")]
-    [RequireAccessToken]
-    [SwaggerManualToken]
     public async Task<ActionResult<ApiResponse<object>>> GetAuthorizeUrlAsync(CancellationToken cancellationToken)
     {
         try
@@ -47,8 +42,6 @@ public sealed class OAuthController(XeroTokenService tokens) : ControllerBase
     /// handler, sent by <c>registerWebhook</c> whenever the instance is saved. 409 when <c>Xero:RedirectUri</c> differs.
     /// </summary>
     [HttpPut("redirect-uri")]
-    [RequireAccessToken]
-    [SwaggerManualToken]
     public async Task<ActionResult<ApiResponse<OAuthRedirectUriState>>> RegisterRedirectUriAsync(
         [FromBody] RedirectUriRegistration? registration,
         CancellationToken cancellationToken)
@@ -64,7 +57,7 @@ public sealed class OAuthController(XeroTokenService tokens) : ControllerBase
         }
     }
 
-    /// <summary>Where Xero sends the browser back; answers a small HTML page, since a person is looking at it.</summary>
+    /// <summary>Where INTERA's webhook relay forwards Xero's browser redirect; answers a small HTML page.</summary>
     [HttpGet("callback")]
     public async Task<IActionResult> CallbackAsync(
         [FromQuery] string? code,
@@ -90,8 +83,6 @@ public sealed class OAuthController(XeroTokenService tokens) : ControllerBase
     }
 
     [HttpPost("refresh")]
-    [RequireAccessToken]
-    [SwaggerManualToken]
     public async Task<ActionResult<ApiResponse<object>>> RefreshAsync(CancellationToken cancellationToken)
     {
         try

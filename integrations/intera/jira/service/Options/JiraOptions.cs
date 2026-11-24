@@ -95,9 +95,6 @@ public sealed class JiraOptions
     /// <summary>Projects, boards or custom fields one read may fan out to (versions, components, sprints, options).</summary>
     public int MaxFanout { get; set; } = 500;
 
-    /// <summary>Fixed shared secret inbound callers must send as X-Access-Token / Bearer to reach this API.</summary>
-    public string ApiAccessToken { get; set; } = string.Empty;
-
     /// <summary>Path (relative to the app base directory unless rooted) of the file the Atlassian grant is kept in.</summary>
     public string OAuthTokenFilePath { get; set; } = "App_Data/jira-oauth-token.json";
 

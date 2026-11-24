@@ -69,11 +69,15 @@ function readTotalCountHeader(response: Response): number | null {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function describeFailure(status: number, bodyText: string, path: string): string {
+function redactSecret(message: string, secret: string): string {
+  return secret.length > 0 ? message.split(secret).join('[REDACTED]') : message;
+}
+
+function describeFailure(status: number, bodyText: string, path: string, secret: string): string {
   try {
     const parsed = JSON.parse(bodyText) as unknown;
     if (isRecord(parsed) && typeof parsed.error === 'string' && parsed.error.trim().length > 0) {
-      return `Zoho Inventory API ${status} for ${path}: ${parsed.error.trim()}`;
+      return redactSecret(`Zoho Inventory API ${status} for ${path}: ${parsed.error.trim()}`, secret);
     }
   } catch {
     // Ignore non-JSON body so raw upstream responses are never echoed.
@@ -82,10 +86,10 @@ function describeFailure(status: number, bodyText: string, path: string): string
   return `Zoho Inventory API request failed with status ${status} for ${path}`;
 }
 
-function unwrapApiResponse<T>(response: IZohoInventoryApiResponse<T>, path: string): T {
+function unwrapApiResponse<T>(response: IZohoInventoryApiResponse<T>, path: string, secret: string): T {
   if (!response.ok) {
     const message = typeof response.error === 'string' && response.error.trim().length > 0
-      ? response.error.trim()
+      ? redactSecret(response.error.trim(), secret)
       : `Zoho Inventory API returned ok=false for ${path}`;
     throw new Error(message);
   }
@@ -114,7 +118,7 @@ export class ZohoInventoryClient {
 
   async queryRaw(apiPath: string, query: IDataQuery, signal?: AbortSignal): Promise<unknown> {
     const { envelope, totalCount } = await this.request(apiPath, 'POST', query, signal);
-    const data = unwrapApiResponse(envelope, apiPath);
+    const data = unwrapApiResponse(envelope, apiPath, this.config.serviceToken);
 
     if (totalCount !== null && Array.isArray(data)) {
       return { rows: data, total: totalCount } satisfies IDataPage;
@@ -125,17 +129,17 @@ export class ZohoInventoryClient {
 
   async queryObject(apiPath: string, query: IDataQuery, name: string, signal?: AbortSignal): Promise<Record<string, unknown>> {
     const { envelope } = await this.request(apiPath, 'POST', query, signal);
-    return normalizeQueryResult(unwrapApiResponse(envelope, apiPath), name);
+    return normalizeQueryResult(unwrapApiResponse(envelope, apiPath, this.config.serviceToken), name);
   }
 
   async getSchema(signal?: AbortSignal): Promise<IZohoSchema> {
     const { envelope } = await this.request(SCHEMA_API_PATH, 'GET', undefined, signal);
-    return unwrapApiResponse(envelope as IZohoInventoryApiResponse<IZohoSchema>, SCHEMA_API_PATH);
+    return unwrapApiResponse(envelope as IZohoInventoryApiResponse<IZohoSchema>, SCHEMA_API_PATH, this.config.serviceToken);
   }
 
   async getOrganization(signal?: AbortSignal): Promise<IZohoOrganization> {
     const { envelope } = await this.request(ORGANIZATION_API_PATH, 'GET', undefined, signal);
-    return unwrapApiResponse(envelope as IZohoInventoryApiResponse<IZohoOrganization>, ORGANIZATION_API_PATH);
+    return unwrapApiResponse(envelope as IZohoInventoryApiResponse<IZohoOrganization>, ORGANIZATION_API_PATH, this.config.serviceToken);
   }
 
   private async request(
@@ -151,7 +155,7 @@ export class ZohoInventoryClient {
       const url = buildApiUrl(this.config, apiPath);
       const headers: Record<string, string> = {
         Accept: 'application/json',
-        ...(this.config.accessToken ? { Authorization: `Bearer ${this.config.accessToken}` } : {}),
+        Authorization: `Bearer ${this.config.serviceToken}`,
         ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
       };
 
@@ -165,7 +169,7 @@ export class ZohoInventoryClient {
       const bodyText = await response.text();
 
       if (!response.ok) {
-        throw new Error(describeFailure(response.status, bodyText, apiPath));
+        throw new Error(describeFailure(response.status, bodyText, apiPath, this.config.serviceToken));
       }
 
       if (bodyText.trim().length === 0) {
@@ -182,6 +186,9 @@ export class ZohoInventoryClient {
       }
       if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
         throw new Error(`Zoho Inventory API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS} ms for ${apiPath}`);
+      }
+      if (error instanceof Error) {
+        throw new Error(redactSecret(error.message, this.config.serviceToken));
       }
 
       throw error;

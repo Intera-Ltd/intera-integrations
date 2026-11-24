@@ -246,7 +246,7 @@ export type ISalesforceDataSourceId = (typeof DATA_SOURCE_IDS)[number];
 
 export interface ISalesforceConfig {
   apiBaseUrl: string;
-  accessToken?: string;
+  serviceToken: string;
 }
 
 export interface ISalesforceApiResponse<T> {

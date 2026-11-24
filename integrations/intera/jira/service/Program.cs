@@ -1,5 +1,3 @@
-using Intera.Common.Authentication;
-using Intera.Common.Infrastructure.OAuth;
 using Intera.Common.Infrastructure.Startup;
 using Intera.Jira.Api.Clients;
 using Intera.Jira.Api.Infrastructure;
@@ -10,7 +8,7 @@ using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddInteraApi("Intera.Jira.Api");
+builder.AddInteraApi("Intera.Jira.Api", requiresDataVolume: true);
 
 builder.Services
     .AddOptions<JiraOptions>()
@@ -30,23 +28,17 @@ builder.Services.AddHttpClient(JiraTokenService.HttpClientName, (serviceProvider
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
     });
 
-// The grant rotates its refresh token on every use, so it lives in this service's own file — see JiraTokenService.
-builder.Services.AddSingleton<IOAuthTokenStore>(serviceProvider => new FileOAuthTokenStore(
-    () => serviceProvider.GetRequiredService<IOptionsMonitor<JiraOptions>>().CurrentValue.OAuthTokenFilePath));
-
-// The redirect URL INTERA registers (its webhook address) is persisted alongside the grant.
-builder.Services.AddSingleton<IOAuthRedirectUriStore>(serviceProvider => new FileOAuthRedirectUriStore(
-    () => serviceProvider.GetRequiredService<IOptionsMonitor<JiraOptions>>().CurrentValue.RedirectUriFilePath));
+// The grant rotates its refresh token on every use; both the encrypted OAuth token and the registered webhook
+// redirect URL live on the persistent volume under /app/App_Data.
+builder.Services.AddInteraFileOAuthStores(
+    sp => sp.GetRequiredService<IOptionsMonitor<JiraOptions>>().CurrentValue.OAuthTokenFilePath,
+    sp => sp.GetRequiredService<IOptionsMonitor<JiraOptions>>().CurrentValue.RedirectUriFilePath);
 
 builder.Services.AddSingleton<JiraTokenService>();
 builder.Services.AddSingleton<JiraResponseCache>();
 builder.Services.AddSingleton<JiraClient>();
 builder.Services.AddScoped<IJiraDataService, JiraDataService>();
 builder.Services.AddHostedService<JiraTokenKeepAliveService>();
-
-builder.Services.AddSingleton<IAccessTokenStore>(serviceProvider => new StaticAccessTokenStore(
-    () => serviceProvider.GetRequiredService<IOptions<JiraOptions>>().Value.ApiAccessToken,
-    "Jira:ApiAccessToken"));
 
 var app = builder.Build();
 

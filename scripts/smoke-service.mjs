@@ -9,6 +9,7 @@
 //
 // Usage: node scripts/smoke-service.mjs <integration-dir> <local-image>
 import { execFileSync, spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -39,12 +40,19 @@ const fakeSettingValue = (setting) => {
   return FAKE[setting.kind];
 };
 
+const serviceToken = crypto.randomBytes(32).toString('base64url');
+const dataKey = deployment.data_path ? crypto.randomBytes(32).toString('base64') : null;
+const platformSecrets = {
+  INTERA_SERVICE_TOKEN: serviceToken,
+  ...(dataKey !== null ? { INTERA_SERVICE_DATA_KEY: dataKey } : {}),
+};
+
 const requiredWithoutDefault = (deployment.settings ?? []).filter(
   (s) => s.required === true && s.default === undefined,
 );
 if (requiredWithoutDefault.length > 0) {
   const missingName = `${name}-missing`;
-  const fixedEnv = Object.entries(deployment.env ?? {}).flatMap(([key, value]) => ['-e', `${key}=${value}`]);
+  const fixedEnv = Object.entries({ ...(deployment.env ?? {}), ...platformSecrets }).flatMap(([key, value]) => ['-e', `${key}=${value}`]);
   try {
     execFileSync('docker', ['run', '-d', '--name', missingName, ...fixedEnv, image], { stdio: 'ignore' });
     const waitDeadline = Date.now() + 15_000;
@@ -69,7 +77,7 @@ if (requiredWithoutDefault.length > 0) {
   }
 }
 
-const variables = { ...(deployment.env ?? {}) };
+const variables = { ...(deployment.env ?? {}), ...platformSecrets };
 for (const setting of deployment.settings ?? []) {
   if (setting.default === undefined && setting.required !== true) continue;
   const value = setting.default ?? fakeSettingValue(setting);
@@ -123,7 +131,11 @@ try {
   if (needsExternalServiceSecrets || needsConnectionSecrets) {
     console.log('skipping live getData smoke calls: integration requires upstream credentials');
   } else {
-    const result = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'try-bundle.mjs'), dir, '--service-url', baseUrl], { stdio: 'inherit' });
+    const result = spawnSync(
+      process.execPath,
+      [path.join(ROOT, 'scripts', 'try-bundle.mjs'), dir, '--service-url', baseUrl, '--service-token', serviceToken],
+      { stdio: 'inherit' },
+    );
     if (result.status !== 0) throw new Error('the bundle failed against the running service');
   }
 } catch (error) {

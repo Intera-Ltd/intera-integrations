@@ -5,6 +5,12 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 const require = createRequire(import.meta.url);
 const bundle = require('../dist/index.js');
 const SERVICE_URL = 'http://jira-service.example.test:8080';
+const SERVICE_TOKEN = 'svc-jira-token-test';
+const baseConfig = (extra = {}) => ({
+  intera_service_url: SERVICE_URL,
+  intera_service_token: SERVICE_TOKEN,
+  ...extra,
+});
 
 let calls;
 let respond;
@@ -37,10 +43,14 @@ const issues = () => bundle.dataSources.find((s) => s.id === 'jira_issues');
 describe('jira bundle contract', () => {
   it('exports manifest, dataSources, getDataSources, provisionInstance, testConnection, and webhook hooks', () => {
     assert.equal(bundle.manifest.id, 'intera-jira-integration');
-    assert.equal(bundle.manifest.version, '3.3.0');
-    assert.equal(bundle.manifest.requires.core, '>=0.5.25');
+    assert.equal(bundle.manifest.version, '3.4.0');
+    assert.equal(bundle.manifest.requires.core, '>=0.5.94');
     assert.equal(bundle.manifest.compatibility.integration_contract, 2);
     assert.deepEqual(bundle.manifest.capabilities, ['datasource', 'webhook']);
+    assert.deepEqual(
+      bundle.manifest.configSchema.map((f) => f.name),
+      ['siteUrl', 'jqlScope'],
+    );
     assert.equal(bundle.manifest.webhooks?.[0]?.key, 'oauth-callback');
     assert.ok(bundle.dataSources.length >= 10);
     assert.deepEqual(bundle.getDataSources(), bundle.dataSources);
@@ -50,48 +60,73 @@ describe('jira bundle contract', () => {
     assert.equal(typeof bundle.onWebhook, 'function');
   });
 
-  it('uses intera_service_url and forwards optional siteUrl, jqlScope, and accessToken', async () => {
+  it('uses intera_service_url and intera_service_token, and forwards optional siteUrl and jqlScope', async () => {
     const rows = await issues().getData(
       {},
-      context({ intera_service_url: SERVICE_URL, siteUrl: 'https://acme.atlassian.net', jqlScope: 'project = ENG' }),
+      context(baseConfig({ siteUrl: 'https://acme.atlassian.net', jqlScope: 'project = ENG' })),
     );
     assert.equal(rows.length, 1);
     assert.equal(calls[0].url, `${SERVICE_URL}/api/Source/issues/query`);
-    assert.equal(calls[0].init.headers.Authorization, undefined);
+    assert.equal(calls[0].init.headers.Authorization, `Bearer ${SERVICE_TOKEN}`);
     assert.equal(calls[0].init.headers['X-Jira-Site'], 'https://acme.atlassian.net');
     assert.equal(calls[0].init.headers['X-Jira-Jql-Scope'], encodeURIComponent('project = ENG'));
-
-    await issues().getData({}, context({ apiBaseUrl: 'https://jira-proxy.example.test', accessToken: 'tok-jira' }));
-    assert.equal(calls[1].url, 'https://jira-proxy.example.test/api/Source/issues/query');
-    assert.equal(calls[1].init.headers.Authorization, 'Bearer tok-jira');
   });
 
-  it('validates service URL before making any request', async () => {
+  it('validates service URL and fails fast on missing intera_service_token before making any request', async () => {
     await assert.rejects(issues().getData({}, context({})), /intera_service_url/);
-    await assert.rejects(issues().getData({}, context({ intera_service_url: 'file:///etc/hosts' })), /http or https/);
+    await assert.rejects(
+      issues().getData({}, context({ intera_service_url: 'file:///etc/hosts', intera_service_token: SERVICE_TOKEN })),
+      /http or https/,
+    );
+    await assert.rejects(
+      issues().getData(
+        {},
+        context({ intera_service_url: 'http://169.254.169.254/latest/meta-data', intera_service_token: SERVICE_TOKEN }),
+      ),
+      /metadata/,
+    );
+    await assert.rejects(
+      issues().getData({}, context({ intera_service_url: SERVICE_URL })),
+      /redeploy the integration/,
+    );
+    await assert.rejects(
+      issues().getData({}, context({ intera_service_url: SERVICE_URL, intera_service_token: '   ' })),
+      /redeploy the integration/,
+    );
     assert.equal(calls.length, 0);
   });
 
-  it('never leaks secret tokens or raw non-JSON upstream bodies in error messages', async () => {
-    const secret = 'secret-jira-inbound-token';
+  it('never leaks intera_service_token or raw non-JSON upstream bodies in error messages', async () => {
+    const secret = 'secret-jira-service-token';
     respond = () => new Response(`bad gateway ${secret}`, { status: 502 });
     await assert.rejects(
-      issues().getData({}, context({ intera_service_url: SERVICE_URL, accessToken: secret })),
+      issues().getData({}, context({ intera_service_url: SERVICE_URL, intera_service_token: secret })),
       (err) => {
         assert.match(err.message, /status 502/);
         assert.equal(err.message.includes(secret), false);
         return true;
       },
     );
+
+    respond = () =>
+      new Response(JSON.stringify({ ok: false, data: null, error: `rejected token ${secret}` }), { status: 401 });
+    await assert.rejects(
+      issues().getData({}, context({ intera_service_url: SERVICE_URL, intera_service_token: secret })),
+      (err) => {
+        assert.equal(err.message.includes(secret), false);
+        return true;
+      },
+    );
   });
 
-  it('forwards context.signal and supports connected testConnection + provisionInstance', async () => {
+  it('forwards context.signal and sends Bearer token on connected testConnection + provisionInstance', async () => {
     const controller = new AbortController();
-    await issues().getData({}, context({ intera_service_url: SERVICE_URL }, { signal: controller.signal }));
+    await issues().getData({}, context(baseConfig(), { signal: controller.signal }));
     assert.equal(calls[0].init.signal.aborted, false);
     controller.abort();
     assert.equal(calls[0].init.signal.aborted, true);
 
+    calls = [];
     respond = (url) => {
       if (url.endsWith('/oauth/status')) {
         return new Response(
@@ -117,12 +152,16 @@ describe('jira bundle contract', () => {
       );
     };
 
-    const conn = await bundle.testConnection({ config: { intera_service_url: SERVICE_URL }, instanceId: null, instanceSlug: null });
+    const conn = await bundle.testConnection({ config: baseConfig(), instanceId: null, instanceSlug: null });
     assert.equal(conn.status, 'ok');
     assert.match(conn.detail, /https:\/\/acme\.atlassian\.net \(5 projects\)/);
 
-    const prov = await bundle.provisionInstance({ config: { intera_service_url: SERVICE_URL }, instanceId: null, instanceSlug: null });
+    const prov = await bundle.provisionInstance({ config: baseConfig(), instanceId: null, instanceSlug: null });
     assert.ok(prov.dataSources[0].fields.some((f) => f.name === 'customfield_10042'));
+    assert.ok(calls.length >= 4);
+    for (const call of calls) {
+      assert.equal(call.init.headers.Authorization, `Bearer ${SERVICE_TOKEN}`);
+    }
   });
 
   it('allows provisionInstance before OAuth sign-in by checking /api/Schema/sources and returning empty overrides', async () => {
@@ -145,12 +184,15 @@ describe('jira bundle contract', () => {
       throw new Error(`Unexpected URL ${url}`);
     };
 
-    const prov = await bundle.provisionInstance({ config: { intera_service_url: SERVICE_URL }, instanceId: null, instanceSlug: null });
+    const prov = await bundle.provisionInstance({ config: baseConfig(), instanceId: null, instanceSlug: null });
     assert.deepEqual(prov, { dataSources: [] });
     assert.ok(calls.some((c) => c.url.endsWith('/api/Schema/sources')));
+    for (const call of calls) {
+      assert.equal(call.init.headers.Authorization, `Bearer ${SERVICE_TOKEN}`);
+    }
   });
 
-  it('returns needs_authorization with authorizeUrl and supports registerWebhook + onWebhook', async () => {
+  it('returns needs_authorization with authorizeUrl and sends Bearer token on status, redirect-uri, authorize-url, and callback', async () => {
     respond = (url, init) => {
       if (url.endsWith('/oauth/status')) {
         return new Response(
@@ -186,7 +228,7 @@ describe('jira bundle contract', () => {
     };
 
     const conn = await bundle.testConnection({
-      config: { intera_service_url: SERVICE_URL },
+      config: baseConfig(),
       instanceId: 'inst-jira',
       instanceSlug: 'jira',
       webhookUrls: [{ handlerKey: 'oauth-callback', url: 'https://core.example.test/api/webhooks/jira-1' }],
@@ -195,7 +237,7 @@ describe('jira bundle contract', () => {
     assert.equal(conn.authorizeUrl, 'https://auth.atlassian.com/authorize?state=xyz');
 
     const reg = await bundle.registerWebhook({
-      config: { intera_service_url: SERVICE_URL },
+      config: baseConfig(),
       handlerKey: 'oauth-callback',
       webhookUrl: 'https://core.example.test/api/webhooks/jira-1',
       publicId: 'jira-1',
@@ -212,12 +254,18 @@ describe('jira bundle contract', () => {
         receivedAt: new Date(),
       },
       {
-        config: { intera_service_url: SERVICE_URL },
+        config: baseConfig(),
         handlerKey: 'oauth-callback',
         webhookUrl: 'https://core.example.test/api/webhooks/jira-1',
       },
     );
     assert.equal(relayed.status, 200);
     assert.match(String(relayed.body), /Jira connected/);
+
+    assert.ok(calls.some((c) => c.url.endsWith('/oauth/status')));
+    assert.ok(calls.some((c) => c.url.includes('/oauth/callback?')));
+    for (const call of calls) {
+      assert.equal(call.init.headers.Authorization, `Bearer ${SERVICE_TOKEN}`);
+    }
   });
 });

@@ -35,11 +35,15 @@ function readTotalCountHeader(response: Response): number | null {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function describeFailure(status: number, bodyText: string, path: string): string {
+function redactSecret(message: string, secret: string): string {
+  return secret.length > 0 ? message.split(secret).join('[REDACTED]') : message;
+}
+
+function describeFailure(status: number, bodyText: string, path: string, secret: string): string {
   try {
     const parsed = JSON.parse(bodyText) as unknown;
     if (isRecord(parsed) && typeof parsed.error === 'string' && parsed.error.trim().length > 0) {
-      return `Jira API ${status} for ${path}: ${parsed.error.trim()}`;
+      return redactSecret(`Jira API ${status} for ${path}: ${parsed.error.trim()}`, secret);
     }
   } catch {
     // Ignore non-JSON body so raw upstream responses are never echoed.
@@ -67,14 +71,20 @@ export class JiraClient {
     const path = '/oauth/status';
     const response = await this.fetchWithTimeout(
       path,
-      { method: 'GET', headers: { Accept: 'application/json' } },
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${this.config.serviceToken}`,
+        },
+      },
       STATUS_TIMEOUT_MS,
       signal,
     );
     const bodyText = await response.text();
 
     if (!response.ok) {
-      throw new Error(describeFailure(response.status, bodyText, path));
+      throw new Error(describeFailure(response.status, bodyText, path, this.config.serviceToken));
     }
 
     const parsed = JSON.parse(bodyText) as unknown;
@@ -92,7 +102,13 @@ export class JiraClient {
     const path = `/oauth/callback?${query.toString()}`;
     const response = await this.fetchWithTimeout(
       path,
-      { method: 'GET', headers: { Accept: 'text/html' } },
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'text/html',
+          Authorization: `Bearer ${this.config.serviceToken}`,
+        },
+      },
       CALLBACK_RELAY_TIMEOUT_MS,
       signal,
     );
@@ -122,6 +138,9 @@ export class JiraClient {
       if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
         throw new Error(`Jira API request timed out after ${timeoutMs} ms for ${apiPath.split('?')[0]}`);
       }
+      if (error instanceof Error) {
+        throw new Error(redactSecret(error.message, this.config.serviceToken));
+      }
 
       throw error;
     }
@@ -143,7 +162,7 @@ export class JiraClient {
         signal,
         headers: {
           Accept: 'application/json',
-          ...(this.config.accessToken ? { Authorization: `Bearer ${this.config.accessToken}` } : {}),
+          Authorization: `Bearer ${this.config.serviceToken}`,
           ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
           ...(this.config.siteUrl ? { [SITE_HEADER]: this.config.siteUrl } : {}),
           ...(this.config.jqlScope ? { [JQL_SCOPE_HEADER]: encodeURIComponent(this.config.jqlScope) } : {}),
@@ -154,7 +173,7 @@ export class JiraClient {
       const bodyText = await response.text();
 
       if (!response.ok) {
-        throw new Error(describeFailure(response.status, bodyText, apiPath));
+        throw new Error(describeFailure(response.status, bodyText, apiPath, this.config.serviceToken));
       }
 
       if (bodyText.trim().length === 0) {
@@ -165,7 +184,7 @@ export class JiraClient {
 
       if (!envelope.ok) {
         const message = typeof envelope.error === 'string' && envelope.error.trim().length > 0
-          ? envelope.error.trim()
+          ? redactSecret(envelope.error.trim(), this.config.serviceToken)
           : `Jira API returned ok=false for ${apiPath}`;
         throw new Error(message);
       }
@@ -186,6 +205,9 @@ export class JiraClient {
       }
       if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
         throw new Error(`Jira API request timed out after ${timeoutMs} ms for ${apiPath}`);
+      }
+      if (error instanceof Error) {
+        throw new Error(redactSecret(error.message, this.config.serviceToken));
       }
 
       throw error;

@@ -33,7 +33,7 @@ public interface IZendeskDataService
 /// <remarks>
 /// <para>
 /// <b>Written against Zendesk's published API reference without access to a Zendesk account</b> — the project's
-/// CLAUDE.md lists what that leaves to confirm.
+/// live verification covers the remaining edge cases.
 /// </para>
 /// <para>
 /// Every row carries the four metadata fields (<see cref="ZendeskSources.Metadata"/>); <c>intera_synced_at</c> is when

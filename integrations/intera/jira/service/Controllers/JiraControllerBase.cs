@@ -22,7 +22,7 @@ namespace Intera.Jira.Api.Controllers;
 /// <b>The query is run once over no rows before anything is read from Jira</b>, so an unknown field or a malformed
 /// <c>relativeDate</c> is refused without spending Jira's quota. The <see cref="ArgumentException"/> catch is also what
 /// turns a bad <c>relativeDate</c> thrown by <c>QueryPushdownExtractor</c> into a 400 rather than a 500 — see the root
-/// CLAUDE.md's sharp edges.
+/// known upstream API edge cases.
 /// </para>
 /// </remarks>
 public abstract class JiraControllerBase : ApiControllerBase

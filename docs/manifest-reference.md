@@ -87,10 +87,10 @@ curl -s https://library.intera-roles.com/api/v1/role-packages
 Starting categories: `accounting`, `erp`, `crm`, `sales-support`,
 `customer-support`, `banking`, `network-support`, `billing`, `monitoring`,
 `navigation`, `logistics`, `manufacturing`, `shipmanagement`, `weather`,
-`external-data`, `document-management`, `payment`.
+`external-data`, `document-management`, `payment`, `project-management`.
 
 Starting Role Packages: `telecom`, `shipmanagement`, `logistics`,
-`manufacturing`, `financial`, `marketplaces`, `farming`.
+`manufacturing`, `financial`, `marketplaces`, `farming`, `b2b`.
 
 Need a new key? Ask in the pull request; the catalog team adds keys.
 
@@ -106,7 +106,8 @@ Absent or `type: none`: Core loads the bundle only.
 | `image` | yes | Image **pinned by digest**: `<registry>/<repository>@sha256:<64 hex>`, lowercase, up to 512 characters. Tags are not accepted. |
 | `port` | yes | Container port the bundle calls, 1–65535. |
 | `health_path` | no | Absolute path the agent polls until it answers 2xx, for example `/health`. Strongly recommended. |
-| `env` | no | Fixed environment variables: names `^[A-Z_][A-Z0-9_]*$`, values quoted strings up to 4096 characters. **Public values only** — never secrets. |
+| `data_path` | no | Absolute path inside the container (e.g. `/app/App_Data`, up to 200 characters, no `.` or `..` segments) backed by a persistent installation volume for stateful services such as OAuth refresh tokens. |
+| `env` | no | Fixed environment variables: names `^[A-Z_][A-Z0-9_]*$`, values quoted strings up to 4096 characters. `INTERA_SERVICE_*` names are reserved by Core. **Public values only** — never secrets. |
 | `settings` | no | Values and secrets of the container that the administrator of the installation sets. See below. |
 
 `env` and `settings` together give the container at most 50 variables, and
@@ -131,7 +132,7 @@ as environment variables.
 | `description` | no | Hint under the field, up to 500 characters. |
 | `kind` | yes | `string`, `secret`, `number` or `boolean`. |
 | `required` | no | `true`: the integration cannot be installed without a value (unless there is a `default`). |
-| `env` | no | Name of the variable in the container, `^[A-Z_][A-Z0-9_]*$`. Defaults to `name` in upper case. `PATH`, `HOME` and `DOCKER_*` are taken by the installation agent. |
+| `env` | no | Name of the variable in the container, `^[A-Z_][A-Z0-9_]*$`. Defaults to `name` in upper case. `PATH`, `HOME`, `DOCKER_*` and `INTERA_SERVICE_*` are reserved. |
 | `default` | no | Value of the same type, used when the administrator sets nothing. A `secret` has no default. |
 
 ```yaml

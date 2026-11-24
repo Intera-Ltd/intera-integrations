@@ -60,9 +60,6 @@ public sealed class ZendeskOptions
     /// </summary>
     public int RefreshTokenKeepAliveDays { get; set; } = 3;
 
-    /// <summary>Fixed shared secret inbound callers must send as X-Access-Token / Bearer to reach this API.</summary>
-    public string ApiAccessToken { get; set; } = string.Empty;
-
     /// <summary>
     /// Read tickets (and the metrics of tickets) through the Incremental Export API — cursor-based, 1000 a page, and
     /// narrowed by a lower bound on the ticket's time — instead of <c>GET /tickets</c> and the Search export. It is

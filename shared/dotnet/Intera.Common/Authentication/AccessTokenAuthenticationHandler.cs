@@ -15,21 +15,16 @@ public sealed class AccessTokenAuthenticationHandler(
 {
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (!tokenStore.RequiresToken)
-        {
-            return SuccessForId(1);
-        }
-
-        var token = TryGetToken();
+        var token = TryGetBearerToken();
         if (string.IsNullOrWhiteSpace(token))
         {
             return AuthenticateResult.NoResult();
         }
 
-        var tokenInfo = await tokenStore.TryValidateAsync(token, Context.RequestAborted);
+        var tokenInfo = await tokenStore.TryValidateAsync(token, Context.RequestAborted).ConfigureAwait(false);
         if (tokenInfo is null)
         {
-            return AuthenticateResult.Fail("Invalid or disabled access token.");
+            return AuthenticateResult.Fail("Invalid service token.");
         }
 
         return SuccessForId(tokenInfo.Id);
@@ -50,13 +45,8 @@ public sealed class AccessTokenAuthenticationHandler(
         return AuthenticateResult.Success(ticket);
     }
 
-    private string? TryGetToken()
+    private string? TryGetBearerToken()
     {
-        if (Request.Headers.TryGetValue("X-Access-Token", out var headerToken))
-        {
-            return headerToken.FirstOrDefault();
-        }
-
         var authorization = Request.Headers.Authorization.ToString();
         const string bearerPrefix = "Bearer ";
 

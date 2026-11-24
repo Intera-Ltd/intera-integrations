@@ -1,0 +1,54 @@
+# Catalog manifest of the JetBrains TeamCity integration.
+# Reference: docs/manifest-reference.md
+id: intera.teamcity
+name: JetBrains TeamCity
+version: '3.2.0'
+runtime_id: intera-teamcity-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.94'
+  integration_contract: 2
+categories: [monitoring]
+roles: [telecom, financial, marketplaces, b2b]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/intera/teamcity@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: server_url
+      label: TeamCity server URL
+      description: Root HTTPS URL of the TeamCity server (including context path if configured)
+      kind: string
+      required: true
+      env: TEAMCITY__SERVERURL
+    - name: api_token
+      label: TeamCity access token
+      description: Bearer access token of a TeamCity user with Project viewer permissions
+      kind: secret
+      required: true
+      env: TEAMCITY__TOKEN
+    - name: test_build_lookback
+      label: Test build lookback
+      description: Number of recent finished builds inspected to find the latest build that reported tests
+      kind: number
+      default: 5
+      env: TEAMCITY__TESTBUILDLOOKBACK
+    - name: max_build_types
+      label: Max build configurations per test query
+      description: Maximum build configurations whose test results may be fetched in a single query
+      kind: number
+      default: 100
+      env: TEAMCITY__MAXBUILDTYPES
+    - name: max_tests_per_build
+      label: Max tests per build
+      description: Maximum test occurrences read per build
+      kind: number
+      default: 10000
+      env: TEAMCITY__MAXTESTSPERBUILD

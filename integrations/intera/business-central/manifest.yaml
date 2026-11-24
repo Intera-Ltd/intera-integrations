@@ -1,0 +1,66 @@
+# Catalog manifest of the Microsoft Dynamics 365 Business Central integration.
+# Reference: docs/manifest-reference.md
+id: intera.business-central
+name: Microsoft Dynamics 365 Business Central
+version: '3.2.0'
+runtime_id: intera-businesscentral-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.94'
+  integration_contract: 2
+categories: [accounting, erp]
+roles: [financial, logistics, manufacturing, marketplaces, b2b]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/intera/business-central@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: tenant_id
+      label: Microsoft Entra ID Tenant ID
+      description: Directory (tenant) GUID under which the Business Central environment is hosted
+      kind: string
+      required: true
+      env: BUSINESSCENTRAL__TENANTID
+    - name: environment
+      label: Business Central environment
+      description: Environment name within the tenant (for example Production or Sandbox)
+      kind: string
+      default: 'Production'
+      env: BUSINESSCENTRAL__ENVIRONMENT
+    - name: client_id
+      label: App Registration Client ID
+      description: Application (client) ID of the Microsoft Entra ID app registration
+      kind: string
+      required: true
+      env: BUSINESSCENTRAL__CLIENTID
+    - name: client_secret
+      label: App Registration Client Secret
+      description: Client secret for OAuth 2.0 client-credentials authentication
+      kind: secret
+      required: true
+      env: BUSINESSCENTRAL__CLIENTSECRET
+    - name: api_base_url
+      label: API base URL override
+      description: Optional override for sovereign/non-standard Business Central clouds (leave empty to derive from tenant and environment)
+      kind: string
+      required: false
+      env: BUSINESSCENTRAL__APIBASEURL
+    - name: oauth_endpoint
+      label: OAuth endpoint override
+      description: Optional Microsoft Entra ID OAuth 2.0 v2.0 endpoint override
+      kind: string
+      required: false
+      env: BUSINESSCENTRAL__OAUTHENDPOINT
+    - name: max_records_per_entity
+      label: Max records per entity
+      description: Maximum OData records fetched per entity read before in-memory query evaluation
+      kind: number
+      default: 5000
+      env: BUSINESSCENTRAL__MAXRECORDSPERENTITY

@@ -4,6 +4,13 @@ All notable changes to this integration are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 version follows [Semantic Versioning](https://semver.org/).
 
+## [3.4.0] - 2026-11-24
+
+### Changed
+
+- Adopted platform-managed `INTERA_SERVICE_TOKEN` (`intera_service_token`) authentication on every service endpoint except `GET /health`, and removed manual `api_access_token` / `apiBaseUrl` / `accessToken` settings (requires Core `>=0.5.94`).
+- Enabled persistent volume storage (`deployment.data_path: /app/App_Data`) with AES-256-GCM encrypted OAuth token persistence via `INTERA_SERVICE_DATA_KEY` and startup path-traversal validation.
+
 ## [3.3.0] - 2026-11-23
 
 ### Added

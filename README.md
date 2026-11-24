@@ -380,11 +380,19 @@ see [Licensing](CONTRIBUTING.md#licensing).
 | Integration | Developer | Shape | Description |
 | --- | --- | --- | --- |
 | [Asana](integrations/intera/asana/) | `intera` | bundle-only | Workspaces, projects, tasks, subtasks, custom fields, time tracking, portfolios, and goals |
+| [Business Central](integrations/intera/business-central/) | `intera` | bundle + .NET 10 service | Microsoft Dynamics 365 Business Central companies, customers, vendors, sales/purchase invoices, and GL entries |
+| [Eurobank](integrations/intera/eurobank/) | `intera` | bundle + .NET 10 service | Eurobank / Hellenic Bank B2B accounts, balances, and transactions over mTLS and OAuth 2.0 |
 | [GitHub](integrations/intera/github/) | `intera` | bundle-only | Repositories, Actions workflows/runs, deployments, commits, pull requests, issues, and security alerts |
+| [Google Sheets](integrations/intera/google-sheets/) | `intera` | bundle-only | Google spreadsheets read via a service account, exposing one dynamic data source per worksheet tab |
 | [Hello .NET](integrations/intera/hello-dotnet/) | `intera` | bundle + .NET 8 service | Sample data source served by a .NET container |
 | [Jira](integrations/intera/jira/) | `intera` | bundle + .NET 10 service | Jira Cloud projects, issues, sprints, boards, changelogs, worklogs, comments, and custom fields |
+| [OneDrive / SharePoint Excel](integrations/intera/onedrive-excel/) | `intera` | bundle-only | Excel (`.xlsx`) workbooks read from OneDrive for Business or SharePoint libraries via Microsoft Graph |
+| [Revolut Business](integrations/intera/revolut/) | `intera` | bundle + .NET 10 service | Revolut Business accounts, balances, exchange rates, and transactions via OAuth 2.0 with RSA JWT assertions |
 | [Salesforce](integrations/intera/salesforce/) | `intera` | bundle + .NET 10 service | Accounts, pipeline opportunities, support cases, tasks, events, and customer orders via SOQL |
 | [SanctionsCheck](integrations/intera/sanctions/) | `intera` | bundle-only | EU Consolidated List of Financial Sanctions downloaded daily and queried locally |
+| [Soft1 ERP](integrations/intera/soft1/) | `intera` | bundle + .NET 10 service | EntersoftOne Soft1 ERP customers, suppliers, items, commercial documents, lines, VAT, and ledger browsers |
+| [TeamCity](integrations/intera/teamcity/) | `intera` | bundle + .NET 10 service | JetBrains TeamCity build configurations, build health, and latest test occurrence metrics |
+| [Unleashed](integrations/intera/unleashed/) | `intera` | bundle + .NET 10 service | Unleashed warehouses, products, stock on hand, purchase/sales orders, shipments, transfers, and stock counts |
 | [Xero](integrations/intera/xero/) | `intera` | bundle + .NET 10 service | Invoices, bills, payments, bank transactions, manual journals, budgets, and financial reports |
 | [Zendesk](integrations/intera/zendesk/) | `intera` | bundle + .NET 10 service | Support tickets, SLA metrics/events, comments, CSAT ratings, groups, users, and organizations |
 | [Zoho Inventory](integrations/intera/zoho-inventory/) | `intera` | bundle + .NET 10 service | Customers, vendors, stock by item/location, orders, receipts, shipments, invoices, and bills |

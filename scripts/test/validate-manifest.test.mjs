@@ -188,3 +188,26 @@ test('ghcr.io/intera-ltd images require the developer namespace', () => {
   assert.equal(problems.length, 1);
   assert.match(problems[0], /must include the developer namespace/);
 });
+
+test('accepts valid data_path and rejects relative, dot, or root paths', () => {
+  assert.deepEqual(check({ data_path: '/app/App_Data' }).problems, []);
+  for (const invalid of ['/', 'app/App_Data', '/app/../etc', '/app/./data']) {
+    const { problems } = check({ data_path: invalid });
+    assert.equal(problems.length, 1, `expected failure for ${invalid}`);
+    assert.match(problems[0], /^deployment\.data_path:/);
+  }
+});
+
+test('INTERA_SERVICE_* variables are reserved in deployment.env and deployment.settings', () => {
+  const { problems } = check({
+    env: { INTERA_SERVICE_TOKEN: 'fixed' },
+    settings: [
+      { name: 'intera_service_token', label: 'Token', kind: 'secret' },
+      { name: 'data_key', label: 'Data key', kind: 'secret', env: 'INTERA_SERVICE_DATA_KEY' },
+    ],
+  });
+  assert.equal(problems.length, 3);
+  for (const problem of problems) {
+    assert.match(problem, /INTERA_SERVICE_\* are set by Core/);
+  }
+});

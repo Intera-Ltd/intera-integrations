@@ -59,9 +59,6 @@ public sealed class ZohoInventoryOptions
     /// </summary>
     public string RefreshToken { get; set; } = string.Empty;
 
-    /// <summary>Fixed shared secret inbound callers must send as X-Access-Token / Bearer.</summary>
-    public string ApiAccessToken { get; set; } = string.Empty;
-
     /// <summary>Records per list page. Zoho's default and maximum are both 200.</summary>
     public int PageSize { get; set; } = 200;
 

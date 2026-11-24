@@ -277,7 +277,7 @@ export interface IIntegrationTestConnectionResult {
 
 export interface IZohoInventoryConfig {
   apiBaseUrl: string;
-  accessToken?: string;
+  serviceToken: string;
 }
 
 export interface IZohoInventoryApiResponse<T> {

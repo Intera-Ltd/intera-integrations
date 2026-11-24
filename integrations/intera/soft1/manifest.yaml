@@ -1,0 +1,83 @@
+# Catalog manifest of the EntersoftOne Soft1 integration.
+# Reference: docs/manifest-reference.md
+id: intera.soft1
+name: EntersoftOne Soft1
+version: '3.2.0'
+runtime_id: intera-soft1-integration
+developer:
+  id: intera
+compatibility:
+  intera_min: '0.5.94'
+  integration_contract: 2
+categories: [accounting, erp]
+roles: [financial, logistics, manufacturing, marketplaces, b2b]
+capabilities:
+  datasources: true
+license: Apache-2.0
+deployment:
+  type: docker
+  image: ghcr.io/intera-ltd/intera/soft1@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  port: 8080
+  health_path: /health
+  env:
+    ASPNETCORE_HTTP_PORTS: '8080'
+  settings:
+    - name: service_url
+      label: Soft1 Web Services URL
+      description: Soft1 s1services endpoint (e.g. https://mycompany.oncloud.gr/s1services)
+      kind: string
+      required: true
+      env: SOFT1__SERVICEURL
+    - name: username
+      label: Soft1 Web Account Username
+      description: Soft1 web user account with Web Service Connector license
+      kind: string
+      required: true
+      env: SOFT1__USERNAME
+    - name: password
+      label: Soft1 Web Account Password
+      kind: secret
+      required: true
+      env: SOFT1__PASSWORD
+    - name: app_id
+      label: Soft1 Application ID
+      description: Application ID registered for the Soft1 web account
+      kind: string
+      required: true
+      env: SOFT1__APPID
+    - name: company
+      label: Company code
+      description: Optional Soft1 company code when the web account has access to multiple companies
+      kind: string
+      required: false
+      env: SOFT1__COMPANY
+    - name: branch
+      label: Branch code
+      description: Optional Soft1 branch code when the company has multiple branches
+      kind: string
+      required: false
+      env: SOFT1__BRANCH
+    - name: module
+      label: Module code
+      description: Optional Soft1 module code for authentication
+      kind: string
+      required: false
+      env: SOFT1__MODULE
+    - name: ref_id
+      label: Reference ID
+      description: Optional Soft1 reference ID for authentication
+      kind: string
+      required: false
+      env: SOFT1__REFID
+    - name: default_fiscal_years
+      label: Default fiscal years
+      description: Fiscal years read when a query does not specify a date range
+      kind: number
+      default: 2
+      env: SOFT1__DEFAULTFISCALYEARS
+    - name: max_fiscal_years
+      label: Max fiscal years
+      description: Maximum fiscal years a single query may span
+      kind: number
+      default: 5
+      env: SOFT1__MAXFISCALYEARS
