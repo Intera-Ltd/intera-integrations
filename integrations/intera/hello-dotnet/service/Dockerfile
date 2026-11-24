@@ -2,7 +2,7 @@
 
 # Build stage: runs on the build machine's architecture and cross-publishes
 # for the target one, so multi-platform builds do not need emulation.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0@sha256:1b955f179b02df4f0eb5fadedaa898cbe44d620a64aab52eec72c8e91d1355b5 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0@sha256:2794448a07118a6eaf00f29ab5d2bf44928517ce5ff86505a63a69230374f599 AS build
 ARG TARGETARCH
 WORKDIR /src
 COPY HelloDotnet.csproj ./
