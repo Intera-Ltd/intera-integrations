@@ -3,11 +3,26 @@ using Intera.Common.Models.Query;
 namespace Intera.Common.Infrastructure.Query;
 
 /// <summary>
+/// Half-open window <c>[Start, EndExclusive)</c> when a <see cref="RelativeDateValue"/> names a
+/// calendar day (<c>from: 'today'</c> without sub-day units) or a whole period
+/// (<c>snapEdge: 'whole'</c>), or a point instant (<see cref="EndExclusive"/> is <see langword="null"/>)
+/// when anchored on <c>now</c> or sub-day units.
+/// </summary>
+public readonly record struct RelativeDateRange(DateTime Start, DateTime? EndExclusive);
+
+/// <summary>
 /// Resolves a <see cref="RelativeDateValue"/>, <see cref="NowExpression"/>, or <see cref="DateDiffExpression"/>
 /// from the query DSL in the requested zone (the process's local zone when none is given).
 /// </summary>
 public static class RelativeDateResolver
 {
+    private enum SnapEdgeKind
+    {
+        Start,
+        End,
+        Whole
+    }
+
     public static DateTime Resolve(RelativeDateValue value, TimeZoneInfo? timeZone = null, DayOfWeek weekStart = DayOfWeek.Monday)
     {
         return Resolve(value, DateTimeOffset.UtcNow, timeZone, weekStart);
@@ -19,6 +34,26 @@ public static class RelativeDateResolver
         TimeZoneInfo? timeZone = null,
         DayOfWeek weekStart = DayOfWeek.Monday)
     {
+        var (start, _, edge) = ComputeCore(value, nowUtc, timeZone, weekStart);
+        return edge == SnapEdgeKind.End ? start.AddDays(1).AddMilliseconds(-1) : start;
+    }
+
+    public static RelativeDateRange ResolveRange(
+        RelativeDateValue value,
+        DateTimeOffset nowUtc,
+        TimeZoneInfo? timeZone = null,
+        DayOfWeek weekStart = DayOfWeek.Monday)
+    {
+        var (start, endExclusive, _) = ComputeCore(value, nowUtc, timeZone, weekStart);
+        return new RelativeDateRange(start, endExclusive);
+    }
+
+    private static (DateTime Start, DateTime? EndExclusive, SnapEdgeKind Edge) ComputeCore(
+        RelativeDateValue value,
+        DateTimeOffset nowUtc,
+        TimeZoneInfo? timeZone,
+        DayOfWeek weekStart)
+    {
         ArgumentNullException.ThrowIfNull(value);
 
         if (!string.Equals(value.Type, "relativeDate", StringComparison.OrdinalIgnoreCase))
@@ -26,30 +61,30 @@ public static class RelativeDateResolver
             throw new ArgumentException($"Unsupported filter value type '{value.Type}'.");
         }
 
-        if (!string.Equals(value.From, "now", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(value.From, "today", StringComparison.OrdinalIgnoreCase))
+        var isFromToday = string.Equals(value.From, "today", StringComparison.OrdinalIgnoreCase);
+        if (!string.Equals(value.From, "now", StringComparison.OrdinalIgnoreCase) && !isFromToday)
         {
             throw new ArgumentException("relativeDate supports only from = 'now' or from = 'today'.");
         }
 
         var now = ToZoneWallClock(nowUtc, timeZone);
+        var baseDate = isFromToday ? now.Date : now;
 
-        var baseDate = string.Equals(value.From, "today", StringComparison.OrdinalIgnoreCase)
-            ? now.Date
-            : now;
+        var canonicalUnit = NormalizeUnit(value.Unit);
+        var shifted = AddUnit(baseDate, canonicalUnit, value.Amount);
 
-        var shifted = AddUnit(baseDate, NormalizeUnit(value.Unit), value.Amount);
-
+        string? canonicalSnapUnit = null;
+        var edge = SnapEdgeKind.Start;
         var snapped = shifted;
-        var toEnd = false;
+
         if (!string.IsNullOrWhiteSpace(value.SnapTo))
         {
-            var snapUnit = NormalizeUnit(value.SnapTo, "snapTo");
-            toEnd = ParseSnapEdgeEnd(value.SnapEdge);
-            snapped = SnapToStart(shifted, snapUnit, weekStart);
-            if (toEnd)
+            canonicalSnapUnit = NormalizeUnit(value.SnapTo, "snapTo");
+            edge = ParseSnapEdge(value.SnapEdge);
+            snapped = SnapToStart(shifted, canonicalSnapUnit, weekStart);
+            if (edge == SnapEdgeKind.End)
             {
-                snapped = AddUnit(snapped, snapUnit, 1);
+                snapped = AddUnit(snapped, canonicalSnapUnit, 1);
             }
         }
         else if (!string.IsNullOrWhiteSpace(value.SnapEdge))
@@ -57,16 +92,54 @@ public static class RelativeDateResolver
             throw new ArgumentException("relativeDate snapEdge requires snapTo.");
         }
 
+        string? canonicalOffsetUnit = null;
         if (value.Offset is { } offset)
         {
-            var offsetUnit = NormalizeUnit(offset.Unit, "offset.unit");
+            canonicalOffsetUnit = NormalizeUnit(offset.Unit, "offset.unit");
             if (offset.Amount != 0)
             {
-                snapped = AddUnit(snapped, offsetUnit, offset.Amount);
+                snapped = AddUnit(snapped, canonicalOffsetUnit, offset.Amount);
             }
         }
 
-        return toEnd ? snapped.AddMilliseconds(-1) : snapped;
+        if (edge == SnapEdgeKind.Whole)
+        {
+            // Period start was shifted by any post-snap offset; period end is one `snapUnit` after
+            // the un-offset period start plus the same offset (preserving month-end clamping when
+            // offsetting by months).
+            var unoffsetStart = SnapToStart(shifted, canonicalSnapUnit!, weekStart);
+            var endBound = AddUnit(unoffsetStart, canonicalSnapUnit!, 1);
+            if (value.Offset is { Amount: not 0 } wholeOffset)
+            {
+                endBound = AddUnit(endBound, canonicalOffsetUnit!, wholeOffset.Amount);
+            }
+
+            return (snapped, endBound, edge);
+        }
+
+        var hasSubDay = IsSubDayUnit(canonicalUnit)
+            || (canonicalSnapUnit is not null && IsSubDayUnit(canonicalSnapUnit))
+            || (canonicalOffsetUnit is not null && value.Offset!.Amount != 0 && IsSubDayUnit(canonicalOffsetUnit));
+
+        if (isFromToday && !hasSubDay)
+        {
+            if (edge == SnapEdgeKind.End)
+            {
+                // `snapped` is already midnight of the day after the target calendar day.
+                var dayStart = snapped.AddDays(-1);
+                return (dayStart, snapped, edge);
+            }
+
+            return (snapped, snapped.AddDays(1), edge);
+        }
+
+        if (edge == SnapEdgeKind.End)
+        {
+            var endInstant = snapped.AddMilliseconds(-1);
+            return (endInstant, null, SnapEdgeKind.Start);
+        }
+
+        return (snapped, null, edge);
     }
 
     public static DateTime ResolveNow(string? anchor, DateTimeOffset nowUtc, TimeZoneInfo? timeZone = null)
@@ -200,20 +273,28 @@ public static class RelativeDateResolver
         };
     }
 
-    private static bool ParseSnapEdgeEnd(string? snapEdge)
+    private static bool IsSubDayUnit(string canonicalUnit) =>
+        canonicalUnit is "hour" or "minute" or "second";
+
+    private static SnapEdgeKind ParseSnapEdge(string? snapEdge)
     {
         if (string.IsNullOrWhiteSpace(snapEdge)
             || string.Equals(snapEdge.Trim(), "start", StringComparison.OrdinalIgnoreCase))
         {
-            return false;
+            return SnapEdgeKind.Start;
         }
 
         if (string.Equals(snapEdge.Trim(), "end", StringComparison.OrdinalIgnoreCase))
         {
-            return true;
+            return SnapEdgeKind.End;
         }
 
-        throw new ArgumentException($"Unsupported relativeDate snapEdge '{snapEdge}'. Expected 'start' or 'end'.");
+        if (string.Equals(snapEdge.Trim(), "whole", StringComparison.OrdinalIgnoreCase))
+        {
+            return SnapEdgeKind.Whole;
+        }
+
+        throw new ArgumentException($"Unsupported relativeDate snapEdge '{snapEdge}'. Expected 'start', 'end', or 'whole'.");
     }
 
     private static DateTime StartOfWeek(DateTime value, DayOfWeek weekStart)

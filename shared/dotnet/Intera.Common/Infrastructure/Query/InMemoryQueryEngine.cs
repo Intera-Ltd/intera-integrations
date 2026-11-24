@@ -363,6 +363,29 @@ public sealed class InMemoryQueryEngine(IReadOnlyDictionary<string, InMemoryQuer
             };
         }
 
+        if (condition.Value is RelativeDateValue relativeDate
+            && condition.Operator is not (FilterOperator.Like or FilterOperator.NotLike))
+        {
+            var range = RelativeDateResolver.ResolveRange(relativeDate, queryNow, queryTimeZone, queryWeekStart);
+            if (range.EndExclusive is { } endExclusive)
+            {
+                return condition.Operator switch
+                {
+                    FilterOperator.Equal => row =>
+                        TryFilterCompare(field.Accessor(row), range.Start, out var cStart) && cStart >= 0
+                        && TryFilterCompare(field.Accessor(row), endExclusive, out var cEnd) && cEnd < 0,
+                    FilterOperator.NotEqual => row =>
+                        (TryFilterCompare(field.Accessor(row), range.Start, out var cStart) && cStart < 0)
+                        || (TryFilterCompare(field.Accessor(row), endExclusive, out var cEnd) && cEnd >= 0),
+                    FilterOperator.LessThan => row => TryFilterCompare(field.Accessor(row), range.Start, out var c) && c < 0,
+                    FilterOperator.LessThanOrEqual => row => TryFilterCompare(field.Accessor(row), endExclusive, out var c) && c < 0,
+                    FilterOperator.GreaterThan => row => TryFilterCompare(field.Accessor(row), endExclusive, out var c) && c >= 0,
+                    FilterOperator.GreaterThanOrEqual => row => TryFilterCompare(field.Accessor(row), range.Start, out var c) && c >= 0,
+                    _ => throw new ArgumentException($"Unsupported filter operator '{condition.Operator}'.")
+                };
+            }
+        }
+
         var value = ResolveValue(condition.Value);
 
         return condition.Operator switch

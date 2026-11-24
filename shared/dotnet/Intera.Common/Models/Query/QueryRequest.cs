@@ -155,8 +155,9 @@ public sealed class RelativeDateValue
     public string? SnapTo { get; init; }
 
     /// <summary>
-    /// Which edge of <see cref="SnapTo"/> to anchor to (<c>start</c> by default, or <c>end</c> —
-    /// the last millisecond before the next period starts).
+    /// Which edge or span of <see cref="SnapTo"/> to anchor to (<c>start</c> by default, <c>end</c> —
+    /// the last calendar day / millisecond of the period, or <c>whole</c> — the entire period
+    /// <c>[start, nextStart)</c>).
     /// </summary>
     public string? SnapEdge { get; init; }
 
