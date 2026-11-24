@@ -11,7 +11,7 @@ COPY . ./
 RUN dotnet publish -c Release -a "$TARGETARCH" --no-restore -o /app
 
 # Runtime stage: ASP.NET runtime only, no SDK, runs as a non-root user.
-FROM mcr.microsoft.com/dotnet/aspnet:8.0@sha256:dccacae9e0e103b5d3ba5fbe442dd8d3316b990cd8f2ec9be0a0ec9db0c0e520 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0@sha256:ca396ece3f2a2e62c7a03f1d7d710b8bc7e8c9dea5597d091178d9f5bfca13f0 AS runtime
 WORKDIR /app
 COPY --from=build /app ./
 ENV ASPNETCORE_HTTP_PORTS=8080 \
