@@ -1,6 +1,6 @@
 # Microsoft Dynamics 365 Business Central
 
-Connects INTERA to Microsoft Dynamics 365 Business Central via Microsoft Entra ID OAuth 2.0 client-credentials authentication and the Business Central v2.0 OData API in a stateless companion .NET 10 service.
+Connects INTERA to Microsoft Dynamics 365 Business Central via Microsoft Entra ID OAuth 2.0 client-credentials authentication and the Business Central v2.0 OData API in a stateless companion .NET 11 service.
 
 | | |
 | --- | --- |

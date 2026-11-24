@@ -1,6 +1,6 @@
 # Unleashed
 
-Connects INTERA to Unleashed inventory, warehouse, purchasing, and sales operations via HMAC-SHA256 signed requests in a stateless companion .NET 10 service.
+Connects INTERA to Unleashed inventory, warehouse, purchasing, and sales operations via HMAC-SHA256 signed requests in a stateless companion .NET 11 service.
 
 | | |
 | --- | --- |

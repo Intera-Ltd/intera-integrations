@@ -260,16 +260,18 @@ public sealed class OptionsValidationTests
     }
 
     [Fact]
-    public void ValidateOnStart_ThrowsBeforeStartupCompletesWhenOptionsAreInvalid()
+    public async Task ValidateOnStart_ThrowsBeforeStartupCompletesWhenOptionsAreInvalid()
     {
+        var ct = TestContext.Current.CancellationToken;
         var services = new ServiceCollection();
         services.AddOptions<SalesforceOptions>().ValidateOnStart();
         services.AddSingleton<IValidateOptions<SalesforceOptions>, SalesforceOptionsValidator>();
 
-        using var provider = services.BuildServiceProvider();
-        var startupValidator = provider.GetRequiredService<IStartupValidator>();
+        await using var provider = services.BuildServiceProvider();
+        var startupValidator = provider.GetRequiredService<IAsyncStartupValidator>();
 
-        Assert.Throws<OptionsValidationException>(() => startupValidator.Validate());
+        await Assert.ThrowsAsync<OptionsValidationException>(
+            async () => await startupValidator.ValidateAsync(ct));
     }
 
     [Fact]

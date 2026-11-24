@@ -97,7 +97,7 @@ You need **Node.js 20+** with npm and **Docker**. No INTERA installation is
 needed: everything below runs on your machine.
 
 **1. Build and test the sample.** [`hello-dotnet`](integrations/intera/hello-dotnet/)
-is a complete integration: a TypeScript bundle in front of a .NET 8 service.
+is a complete integration: a TypeScript bundle in front of a .NET 11 service.
 
 ```bash
 git clone https://github.com/Intera-Ltd/intera-integrations.git
@@ -164,7 +164,7 @@ templates/
   bundle-only/                            bundle that calls an external API
   bundle-with-service/                    bundle + container service
 shared/
-  dotnet/Intera.Common/                   shared .NET 10 library (HTTP, OAuth, Query DSL, controllers)
+  dotnet/Intera.Common/                   shared .NET 11 library (HTTP, OAuth, Query DSL, controllers)
   ts/                                     shared TypeScript contract types, relative dates, and query evaluator
 docs/                                     guides and references
 scripts/
@@ -319,7 +319,7 @@ with a key the administrator enters, use
 language, libraries, heavy processing or state.
 
 **Which languages can the service use?** Any language that runs in a Linux
-container and serves HTTP. The sample uses .NET 8; the template uses Node.js.
+container and serves HTTP. The sample uses .NET 11; the template uses Node.js.
 Images are built for `linux/amd64` and `linux/arm64`.
 
 **Can the bundle use npm packages at runtime?** Only `dist/` goes into the
@@ -381,22 +381,22 @@ see [Licensing](CONTRIBUTING.md#licensing).
 | Integration | Developer | Shape | Description |
 | --- | --- | --- | --- |
 | [Asana](integrations/intera/asana/) | `intera` | bundle-only | Workspaces, projects, tasks, subtasks, custom fields, time tracking, portfolios, and goals |
-| [Business Central](integrations/intera/business-central/) | `intera` | bundle + .NET 10 service | Microsoft Dynamics 365 Business Central companies, customers, vendors, sales/purchase invoices, and GL entries |
-| [Eurobank](integrations/intera/eurobank/) | `intera` | bundle + .NET 10 service | Eurobank / Hellenic Bank B2B accounts, balances, and transactions over mTLS and OAuth 2.0 |
+| [Business Central](integrations/intera/business-central/) | `intera` | bundle + .NET 11 service | Microsoft Dynamics 365 Business Central companies, customers, vendors, sales/purchase invoices, and GL entries |
+| [Eurobank](integrations/intera/eurobank/) | `intera` | bundle + .NET 11 service | Eurobank / Hellenic Bank B2B accounts, balances, and transactions over mTLS and OAuth 2.0 |
 | [GitHub](integrations/intera/github/) | `intera` | bundle-only | Repositories, Actions workflows/runs, deployments, commits, pull requests, issues, and security alerts |
 | [Google Sheets](integrations/intera/google-sheets/) | `intera` | bundle-only | Google spreadsheets read via a service account, exposing one dynamic data source per worksheet tab |
-| [Hello .NET](integrations/intera/hello-dotnet/) | `intera` | bundle + .NET 8 service | Sample data source served by a .NET container |
-| [Jira](integrations/intera/jira/) | `intera` | bundle + .NET 10 service | Jira Cloud projects, issues, sprints, boards, changelogs, worklogs, comments, and custom fields |
+| [Hello .NET](integrations/intera/hello-dotnet/) | `intera` | bundle + .NET 11 service | Sample data source served by a .NET container |
+| [Jira](integrations/intera/jira/) | `intera` | bundle + .NET 11 service | Jira Cloud projects, issues, sprints, boards, changelogs, worklogs, comments, and custom fields |
 | [OneDrive / SharePoint Excel](integrations/intera/onedrive-excel/) | `intera` | bundle-only | Excel (`.xlsx`) workbooks read from OneDrive for Business or SharePoint libraries via Microsoft Graph |
-| [Revolut Business](integrations/intera/revolut/) | `intera` | bundle + .NET 10 service | Revolut Business accounts, balances, exchange rates, and transactions via OAuth 2.0 with RSA JWT assertions |
-| [Salesforce](integrations/intera/salesforce/) | `intera` | bundle + .NET 10 service | Accounts, pipeline opportunities, support cases, tasks, events, and customer orders via SOQL |
+| [Revolut Business](integrations/intera/revolut/) | `intera` | bundle + .NET 11 service | Revolut Business accounts, balances, exchange rates, and transactions via OAuth 2.0 with RSA JWT assertions |
+| [Salesforce](integrations/intera/salesforce/) | `intera` | bundle + .NET 11 service | Accounts, pipeline opportunities, support cases, tasks, events, and customer orders via SOQL |
 | [SanctionsCheck](integrations/intera/sanctions/) | `intera` | bundle-only | EU Consolidated List of Financial Sanctions downloaded daily and queried locally |
-| [Soft1 ERP](integrations/intera/soft1/) | `intera` | bundle + .NET 10 service | EntersoftOne Soft1 ERP customers, suppliers, items, commercial documents, lines, VAT, and ledger browsers |
-| [TeamCity](integrations/intera/teamcity/) | `intera` | bundle + .NET 10 service | JetBrains TeamCity build configurations, build health, and latest test occurrence metrics |
-| [Unleashed](integrations/intera/unleashed/) | `intera` | bundle + .NET 10 service | Unleashed warehouses, products, stock on hand, purchase/sales orders, shipments, transfers, and stock counts |
-| [Xero](integrations/intera/xero/) | `intera` | bundle + .NET 10 service | Invoices, bills, payments, bank transactions, manual journals, budgets, and financial reports |
-| [Zendesk](integrations/intera/zendesk/) | `intera` | bundle + .NET 10 service | Support tickets, SLA metrics/events, comments, CSAT ratings, groups, users, and organizations |
-| [Zoho Inventory](integrations/intera/zoho-inventory/) | `intera` | bundle + .NET 10 service | Customers, vendors, stock by item/location, orders, receipts, shipments, invoices, and bills |
+| [Soft1 ERP](integrations/intera/soft1/) | `intera` | bundle + .NET 11 service | EntersoftOne Soft1 ERP customers, suppliers, items, commercial documents, lines, VAT, and ledger browsers |
+| [TeamCity](integrations/intera/teamcity/) | `intera` | bundle + .NET 11 service | JetBrains TeamCity build configurations, build health, and latest test occurrence metrics |
+| [Unleashed](integrations/intera/unleashed/) | `intera` | bundle + .NET 11 service | Unleashed warehouses, products, stock on hand, purchase/sales orders, shipments, transfers, and stock counts |
+| [Xero](integrations/intera/xero/) | `intera` | bundle + .NET 11 service | Invoices, bills, payments, bank transactions, manual journals, budgets, and financial reports |
+| [Zendesk](integrations/intera/zendesk/) | `intera` | bundle + .NET 11 service | Support tickets, SLA metrics/events, comments, CSAT ratings, groups, users, and organizations |
+| [Zoho Inventory](integrations/intera/zoho-inventory/) | `intera` | bundle + .NET 11 service | Customers, vendors, stock by item/location, orders, receipts, shipments, invoices, and bills |
 
 ## License
 

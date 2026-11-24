@@ -1,6 +1,6 @@
 # Zendesk
 
-Connects INTERA to Zendesk Support via OAuth 2.0 (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint with AES-256-GCM encrypted persistent token storage so the companion .NET 10 service requires no public ingress of its own), exposing tickets, ticket metrics, SLA events, comments, satisfaction ratings, groups, users, organizations, forms, and SLA policies.
+Connects INTERA to Zendesk Support via OAuth 2.0 (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint with AES-256-GCM encrypted persistent token storage so the companion .NET 11 service requires no public ingress of its own), exposing tickets, ticket metrics, SLA events, comments, satisfaction ratings, groups, users, organizations, forms, and SLA policies.
 
 | | |
 | --- | --- |
