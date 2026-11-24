@@ -2,7 +2,7 @@ import { createSoft1Client } from '../api/soft1-client';
 import { readPluginConfig } from '../config';
 import { SOURCE_ID_PREFIX } from '../constants';
 import type { IDataQuery, IDataQueryContext, IDataQueryExecutor } from '../types';
-import { normalizeDataQuery } from './query-normalization';
+import { normalizeDataQuery } from '@intera-integrations/shared';
 import { apiPath } from './soft1-data-sources.source';
 import { SOFT1_SOURCES } from './soft1-sources.generated';
 

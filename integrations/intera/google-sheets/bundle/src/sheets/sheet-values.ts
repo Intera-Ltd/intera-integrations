@@ -1,6 +1,6 @@
 import type { TNumberFormatType } from '../google/sheets-client';
 import type { DataSourceFieldType } from '../types';
-import { isBlank, parseBoolean, parseDate, parseNumber } from './value-types';
+import { isBlank, parseBoolean, parseDate, parseNumber } from '@intera-integrations/shared';
 
 /**
  * Cell value normalization and column type inference for Google Sheets cells.

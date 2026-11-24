@@ -5,10 +5,14 @@
   "scripts": {
     "validate": "node scripts/validate-manifest.mjs",
     "validate:all": "node scripts/validate-manifest.mjs --all",
-    "test": "node --test scripts/test/*.test.mjs"
+    "typecheck:shared": "tsc -p shared/ts/tsconfig.json --noEmit",
+    "test": "npm run typecheck:shared && node --test scripts/test/*.test.mjs"
   },
   "devDependencies": {
-    "js-yaml": "^4.1.0"
+    "@types/node": "^20.19.0",
+    "esbuild": "^0.25.0",
+    "js-yaml": "^4.1.0",
+    "typescript": "^5.8.0"
   },
   "engines": {
     "node": ">=20"

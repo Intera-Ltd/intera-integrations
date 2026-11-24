@@ -133,7 +133,7 @@ try {
   } else {
     const result = spawnSync(
       process.execPath,
-      [path.join(ROOT, 'scripts', 'try-bundle.mjs'), dir, '--service-url', baseUrl, '--service-token', serviceToken],
+      [path.join(ROOT, 'scripts', 'try-bundle.mjs'), dir, `--service-url=${baseUrl}`, `--service-token=${serviceToken}`],
       { stdio: 'inherit' },
     );
     if (result.status !== 0) throw new Error('the bundle failed against the running service');

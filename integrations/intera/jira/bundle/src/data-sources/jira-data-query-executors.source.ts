@@ -2,7 +2,7 @@ import { createJiraClient } from '../api/jira-client';
 import { readPluginConfig } from '../config';
 import { SOURCE_ID_PREFIX } from '../constants';
 import type { IDataQuery, IDataQueryContext, IDataQueryExecutor } from '../types';
-import { normalizeDataQuery } from './query-normalization';
+import { normalizeDataQuery } from '@intera-integrations/shared';
 import { apiPath } from './jira-data-sources.source';
 import { JIRA_SOURCES } from './jira-sources.generated';
 

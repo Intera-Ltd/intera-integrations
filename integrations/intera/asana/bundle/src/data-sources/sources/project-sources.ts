@@ -2,7 +2,7 @@ import { AsanaApiError, type AsanaObject } from '../../asana/asana-client';
 import { mapLimited } from '../../asana/map-limited';
 import type { AsanaReader } from '../../asana/reader';
 import type { AsanaRecord } from '../../types';
-import type { IQueryShape } from '../query-shape';
+import type { IQueryShape } from '@intera-integrations/shared';
 import {
   LOOKUP,
   bool,

@@ -119,4 +119,80 @@ public sealed class HttpsAndQueryEngineTests
             });
         Assert.Equal(10, fieldRefFiltered.Count);
     }
+
+    [Fact]
+    public void CalendarDayAndWholePeriodRanges_EvaluateAsHalfOpenIntervalsAcrossInMemoryAndPushdown()
+    {
+        var fixedNowUtc = new DateTimeOffset(2026, 3, 18, 14, 35, 20, TimeSpan.Zero);
+        var utc = TimeZoneInfo.Utc;
+
+        var today = new RelativeDateValue
+        {
+            Type = "relativeDate",
+            From = "today",
+            Unit = "day",
+            Amount = 0
+        };
+        var todayRange = RelativeDateResolver.ResolveRange(today, fixedNowUtc, utc);
+        Assert.Equal(new DateTime(2026, 3, 18, 0, 0, 0), todayRange.Start);
+        Assert.Equal(new DateTime(2026, 3, 19, 0, 0, 0), todayRange.EndExclusive);
+
+        var thisMonth = new RelativeDateValue
+        {
+            Type = "relativeDate",
+            From = "today",
+            Unit = "month",
+            Amount = 0,
+            SnapTo = "month",
+            SnapEdge = "whole"
+        };
+        var monthRange = RelativeDateResolver.ResolveRange(thisMonth, fixedNowUtc, utc);
+        Assert.Equal(new DateTime(2026, 3, 1, 0, 0, 0), monthRange.Start);
+        Assert.Equal(new DateTime(2026, 4, 1, 0, 0, 0), monthRange.EndExclusive);
+
+        var pushdown = QueryPushdownExtractor.Extract(
+            new QueryRequest
+            {
+                TimeZone = "UTC",
+                Filter = new FilterCondition
+                {
+                    Type = "condition",
+                    Field = "transaction_date",
+                    Operator = FilterOperator.Equal,
+                    Value = thisMonth
+                }
+            },
+            dateField: "transaction_date",
+            keyFields: [],
+            nowUtc: fixedNowUtc);
+        Assert.Equal(new DateOnly(2026, 3, 1), pushdown.From);
+        Assert.Equal(new DateOnly(2026, 3, 31), pushdown.To);
+
+        var nowToday = DateTimeOffset.UtcNow.Date;
+        var rows = new Dictionary<string, object?>[]
+        {
+            new() { ["id"] = 1, ["transaction_date"] = nowToday.AddDays(-1).AddHours(23) },
+            new() { ["id"] = 2, ["transaction_date"] = nowToday.AddHours(14).AddMinutes(23) },
+            new() { ["id"] = 3, ["transaction_date"] = nowToday.AddDays(1) }
+        };
+        var memFields = new Dictionary<string, InMemoryQueryField>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["id"] = new("id", r => r["id"]),
+            ["transaction_date"] = new("transaction_date", r => r["transaction_date"])
+        };
+        var matchedToday = new InMemoryQueryEngine(memFields).Execute(
+            rows,
+            new QueryRequest
+            {
+                TimeZone = "UTC",
+                Filter = new FilterCondition
+                {
+                    Type = "condition",
+                    Field = "transaction_date",
+                    Operator = FilterOperator.Equal,
+                    Value = today
+                }
+            });
+        Assert.Equal(2, Assert.Single(matchedToday)["id"]);
+    }
 }

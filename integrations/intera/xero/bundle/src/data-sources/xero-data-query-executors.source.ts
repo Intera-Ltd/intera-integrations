@@ -2,7 +2,7 @@ import { createXeroClient } from '../api/xero-client';
 import { readPluginConfig } from '../config';
 import { SOURCE_ID_PREFIX } from '../constants';
 import type { IDataQuery, IDataQueryContext, IDataQueryExecutor } from '../types';
-import { normalizeDataQuery } from './query-normalization';
+import { normalizeDataQuery } from '@intera-integrations/shared';
 import { apiPath } from './xero-data-sources.source';
 import { XERO_SOURCES } from './xero-sources.generated';
 

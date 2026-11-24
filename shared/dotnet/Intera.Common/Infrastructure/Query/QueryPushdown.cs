@@ -200,6 +200,38 @@ public static class QueryPushdownExtractor
 
         private void AcceptDate(FilterCondition condition)
         {
+            if (condition.Value is RelativeDateValue relativeDate)
+            {
+                var range = RelativeDateResolver.ResolveRange(relativeDate, nowUtc, timeZone, weekStart);
+                var startDay = DateOnly.FromDateTime(range.Start);
+                var inclusiveEndDay = range.EndExclusive is { } endEx
+                    ? DateOnly.FromDateTime(endEx.AddTicks(-1))
+                    : startDay;
+
+                switch (condition.Operator)
+                {
+                    case FilterOperator.GreaterThanOrEqual:
+                        from = from is null || startDay > from ? startDay : from;
+                        break;
+                    case FilterOperator.GreaterThan:
+                        var gtDay = range.EndExclusive is { } gtEx ? DateOnly.FromDateTime(gtEx) : startDay;
+                        from = from is null || gtDay > from ? gtDay : from;
+                        break;
+                    case FilterOperator.LessThan:
+                        to = to is null || startDay < to ? startDay : to;
+                        break;
+                    case FilterOperator.LessThanOrEqual:
+                        to = to is null || inclusiveEndDay < to ? inclusiveEndDay : to;
+                        break;
+                    case FilterOperator.Equal:
+                        from = from is null || startDay > from ? startDay : from;
+                        to = to is null || inclusiveEndDay < to ? inclusiveEndDay : to;
+                        break;
+                }
+
+                return;
+            }
+
             switch (condition.Operator)
             {
                 case FilterOperator.GreaterThan or FilterOperator.GreaterThanOrEqual:

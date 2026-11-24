@@ -2,7 +2,7 @@ import { createSoft1Client } from '../api/soft1-client';
 import { readPluginConfig } from '../config';
 import { SOURCE_ID_PREFIX } from '../constants';
 import type { IDataSource, IDataSourceContext, IDataSourceParams } from '../types';
-import { normalizeDataQuery } from './query-normalization';
+import { normalizeDataQuery } from '@intera-integrations/shared';
 import { SOFT1_SOURCES, type ISoft1SourceDefinition } from './soft1-sources.generated';
 
 export function apiPath(definition: ISoft1SourceDefinition): string {

@@ -3,17 +3,16 @@ import { createRequire } from 'node:module';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 const require = createRequire(import.meta.url);
-const bundle = require('../dist/index.js');
+const distBundle = require('../dist/index.js');
 const {
+  bundle,
   cached,
   clearResponseCache,
   createResponseCache,
   getResponseCacheStats,
-} = require('../dist/asana/response-cache.js');
-const {
   MAX_RESPONSE_CACHE_BYTES,
   MAX_RESPONSE_CACHE_ENTRIES,
-} = require('../dist/constants.js');
+} = require('./dist/harness.cjs');
 
 let calls;
 let respond;
@@ -82,6 +81,9 @@ afterEach(() => {
 
 describe('asana bundle contract', () => {
   it('exports manifest, 16 dataSources, getDataSources, and testConnection', () => {
+    assert.deepEqual(distBundle.manifest, bundle.manifest);
+    assert.equal(distBundle.dataSources.length, 16);
+    assert.equal(typeof distBundle.testConnection, 'function');
     assert.equal(bundle.manifest.id, 'intera-asana-integration');
     assert.equal(bundle.manifest.version, '3.2.1');
     assert.equal(bundle.manifest.compatibility.integration_contract, 2);

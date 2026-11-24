@@ -4,14 +4,19 @@ import type {
   FilterExpressionCondition,
   FilterNode,
   IDataSourceParams,
+  RelativeDateValue,
   RowExpression,
-} from '../types';
-import { parseDate } from '../sheets/value-types';
-import { resolveRelativeDate } from './relative-date';
+} from './contract-types';
+import {
+  resolveRelativeDateRange,
+  type IRelativeDateOptions,
+} from './relative-date';
+import { parseDate } from './value-types';
 
 /**
- * Extracts conjunct filter bounds, referenced columns, and normalized filter
- * nodes (including Query Contract 1.5.0 expression filters) from query params.
+ * Extracts superset pushdown bounds, referenced columns, and normalized filter
+ * nodes (including Query Contract 1.5+ expression filters and half-open
+ * `relativeDate` spans) from `IDataSourceParams`.
  */
 export interface IQueryShape {
   filters: FilterNode[];
@@ -23,9 +28,16 @@ export interface IQueryShape {
 
 export function analyzeQuery(
   params: IDataSourceParams,
-  weekStart = 1,
+  weekStart: number | string | undefined = params.weekStart,
   now?: Date,
+  timeZone: string | undefined = params.timeZone,
 ): IQueryShape {
+  const options: IRelativeDateOptions = {
+    ...(now ? { now } : {}),
+    ...(timeZone ? { timeZone } : {}),
+    ...(weekStart !== undefined ? { weekStart } : {}),
+  };
+
   const filters = normalizeFilterList(params);
 
   const conditions: FilterCondition[] = [];
@@ -36,7 +48,40 @@ export function analyzeQuery(
   const values = new Map<string, Set<string>>();
   const lower = new Map<string, number>();
   const upper = new Map<string, number>();
+
   for (const condition of conditions) {
+    if (isRelativeDate(condition.value)) {
+      const range = resolveRelativeDateRange(condition.value, options);
+      const inclusiveEnd =
+        range.endExclusive !== null ? range.endExclusive - 1 : range.start;
+
+      switch (condition.operator) {
+        case '=':
+          setLower(lower, condition.field, range.start);
+          setUpper(upper, condition.field, inclusiveEnd);
+          break;
+        case '>=':
+          setLower(lower, condition.field, range.start);
+          break;
+        case '>':
+          setLower(
+            lower,
+            condition.field,
+            range.endExclusive !== null ? range.endExclusive : range.start,
+          );
+          break;
+        case '<':
+          setUpper(upper, condition.field, range.start);
+          break;
+        case '<=':
+          setUpper(upper, condition.field, inclusiveEnd);
+          break;
+        default:
+          break;
+      }
+      continue;
+    }
+
     switch (condition.operator) {
       case '=':
       case 'IN': {
@@ -62,23 +107,17 @@ export function analyzeQuery(
       }
       case '>':
       case '>=': {
-        const bound = boundValue(condition.value, weekStart, now);
+        const bound = boundLiteralDate(condition.value, options.timeZone);
         if (bound !== undefined) {
-          lower.set(
-            condition.field,
-            Math.max(lower.get(condition.field) ?? bound, bound),
-          );
+          setLower(lower, condition.field, bound);
         }
         break;
       }
       case '<':
       case '<=': {
-        const bound = boundValue(condition.value, weekStart, now);
+        const bound = boundLiteralDate(condition.value, options.timeZone);
         if (bound !== undefined) {
-          upper.set(
-            condition.field,
-            Math.min(upper.get(condition.field) ?? bound, bound),
-          );
+          setUpper(upper, condition.field, bound);
         }
         break;
       }
@@ -93,11 +132,15 @@ export function analyzeQuery(
   let referenced: Set<string> | undefined;
   if (expressions.length > 0) {
     referenced = new Set<string>();
-    for (const filter of filters) collectFilterFields(filter, referenced);
+    for (const filter of filters) {
+      collectFilterFields(filter, referenced);
+    }
     for (const result of expressions) {
       collectExpressionFields(result.expression, referenced);
     }
-    for (const term of params.orderBy ?? []) referenced.add(term.field);
+    for (const term of params.orderBy ?? []) {
+      referenced.add(term.field);
+    }
     for (const key of Array.isArray(params.groupBy) ? params.groupBy : []) {
       referenced.add(key);
     }
@@ -117,8 +160,8 @@ export function analyzeQuery(
 
 /**
  * Normalizes a filter tree so expression filters rewriting simple field
- * comparisons (e.g. `field op value` or `field op field`) and nested groups
- * carry canonical Query Contract 1.5.0 nodes.
+ * comparisons (`field op value`, `field op field`, `field IS_NULL`) and nested
+ * groups carry canonical Query Contract 1.5+ nodes.
  */
 export function normalizeFilterNode(node: FilterNode): FilterNode {
   if (node.type === 'group') {
@@ -227,34 +270,41 @@ function normalizeRowExpression(expression: RowExpression): RowExpression {
   return expression;
 }
 
+function setLower(map: Map<string, number>, field: string, bound: number): void {
+  const prev = map.get(field);
+  map.set(field, prev === undefined ? bound : Math.max(prev, bound));
+}
+
+function setUpper(map: Map<string, number>, field: string, bound: number): void {
+  const prev = map.get(field);
+  map.set(field, prev === undefined ? bound : Math.min(prev, bound));
+}
+
+function isRelativeDate(value: unknown): value is RelativeDateValue {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    (value as { type?: unknown }).type === 'relativeDate'
+  );
+}
+
+function boundLiteralDate(
+  value: unknown,
+  timeZone?: string,
+): number | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  return parseDate(value, timeZone) ?? undefined;
+}
+
 function scalarText(value: unknown): string | undefined {
   if (typeof value === 'string') return value;
   if (typeof value === 'number' || typeof value === 'boolean') {
     return String(value);
   }
   return undefined;
-}
-
-function boundValue(
-  value: unknown,
-  weekStart: number,
-  now?: Date,
-): number | undefined {
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    (value as { type?: unknown }).type === 'relativeDate'
-  ) {
-    return resolveRelativeDate(
-      value as Parameters<typeof resolveRelativeDate>[0],
-      weekStart,
-      now,
-    );
-  }
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  return parseDate(value) ?? undefined;
 }
 
 function collectConjuncts(

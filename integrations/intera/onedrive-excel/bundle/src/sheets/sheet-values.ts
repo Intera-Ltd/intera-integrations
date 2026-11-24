@@ -1,6 +1,6 @@
 import type { DataSourceFieldType } from '../types';
 import type { TDateKind } from '../xlsx/number-format';
-import { isBlank, parseBoolean, parseDate, parseNumber } from './value-types';
+import { isBlank, parseBoolean, parseDate, parseNumber } from '@intera-integrations/shared';
 
 export type { TDateKind } from '../xlsx/number-format';
 

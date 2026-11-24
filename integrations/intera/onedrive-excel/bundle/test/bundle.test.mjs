@@ -9,26 +9,21 @@ import zlib from 'node:zlib';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const bundle = require('../dist/index.js');
-const { fetchBoundedBytes } = require('../dist/graph/http.js');
+const distBundle = require('../dist/index.js');
 const {
+  bundle,
+  fetchBoundedBytes,
   clearTokenCache,
   getTokenCacheSize,
-} = require('../dist/graph/token-cache.js');
-const {
   clearWorkbookCache,
   getWorkbookCacheSize,
-} = require('../dist/graph/drive-client.js');
-const {
   FILE_CACHE_ENTRIES,
   MAX_FILE_BYTES,
   MAX_TOKEN_CACHE_ENTRIES,
-} = require('../dist/constants.js');
-const {
   analyzeQuery,
   normalizeFilterNode,
-} = require('../dist/data-sources/query-shape.js');
-const { decodeEntities } = require('../dist/xlsx/xml.js');
+  decodeEntities,
+} = require('./dist/harness.cjs');
 
 const TENANT_ID = '11111111-2222-3333-4444-555555555555';
 const CLIENT_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
@@ -300,6 +295,9 @@ afterEach(() => {
 
 describe('onedrive-excel bundle contract', () => {
   it('exports manifest, excel-rows dataSource, provisionInstance, testConnection, and built icon asset', () => {
+    assert.deepEqual(distBundle.manifest, bundle.manifest);
+    assert.equal(typeof distBundle.provisionInstance, 'function');
+    assert.equal(typeof distBundle.testConnection, 'function');
     assert.equal(bundle.manifest.id, 'intera-onedrive-excel-integration');
     assert.equal(bundle.manifest.name, 'Excel (OneDrive / SharePoint)');
     assert.equal(bundle.manifest.version, '3.3.0');

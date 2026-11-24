@@ -1,9 +1,13 @@
 import {
+  buildEvaluationSchema,
+  executeInMemoryQuery,
+} from '@intera-integrations/shared';
+import { readGsheetConfig } from '../config';
+import {
   SHEET_ROWS_SOURCE_DESCRIPTION,
   SHEET_ROWS_SOURCE_ID,
   SHEET_ROWS_SOURCE_NAME,
 } from '../constants';
-import { readGsheetConfig } from '../config';
 import { readTable } from '../sheets/sheet-reader';
 import { sheetIdOfSource } from '../sheets/tab-source-id';
 import type {
@@ -12,13 +16,6 @@ import type {
   IDataSourcePage,
   IDataSourceParams,
 } from '../types';
-import {
-  applyOrder,
-  buildEvaluationSchema,
-  evaluateExpressions,
-  matchesFilter,
-} from './query-evaluator';
-import { analyzeQuery } from './query-shape';
 
 export const gsheetRowsDataSource: IDataSource = {
   id: SHEET_ROWS_SOURCE_ID,
@@ -38,40 +35,7 @@ export const gsheetRowsDataSource: IDataSource = {
       schema.fields,
       config.weekStart,
     );
-    const shape = analyzeQuery(params, config.weekStart, evaluationSchema.now);
-
-    let filtered = rows;
-    for (const filter of shape.filters) {
-      filtered = filtered.filter((row) =>
-        matchesFilter(row, filter, evaluationSchema),
-      );
-    }
-
-    const shaped =
-      Array.isArray(params.expressions) && params.expressions.length > 0
-        ? evaluateExpressions(
-            filtered,
-            params.expressions,
-            evaluationSchema,
-            params.orderBy,
-            Array.isArray(params.groupBy) ? params.groupBy : undefined,
-          )
-        : applyOrder(filtered, params.orderBy, evaluationSchema);
-
-    if (typeof params.offset === 'number' && params.offset >= 0) {
-      const limit =
-        typeof params.limit === 'number' && params.limit > 0
-          ? params.limit
-          : undefined;
-      const start = params.offset;
-      const end = limit === undefined ? undefined : start + limit;
-      return { rows: shaped.slice(start, end), total: shaped.length };
-    }
-
-    if (typeof params.limit === 'number' && params.limit > 0) {
-      return shaped.slice(0, params.limit);
-    }
-    return shaped;
+    return executeInMemoryQuery(rows, params, evaluationSchema);
   },
 };
 
