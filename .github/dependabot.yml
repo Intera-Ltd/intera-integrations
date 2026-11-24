@@ -1,76 +1,50 @@
+# Dependency updates, grouped so each ecosystem gives at most one PR a week.
+# Major versions are not proposed automatically: a major bump (for example
+# .NET 10 -> 11) is a planned change made by hand.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ['*']
 
   - package-ecosystem: npm
-    directory: /
+    directories:
+      - /
+      - /integrations/intera/*/bundle
     schedule:
       interval: weekly
+    groups:
+      npm:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: docker
-    directory: /integrations/intera/business-central/service
+    directories:
+      - /integrations/intera/*/service
     schedule:
       interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/eurobank/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/hello-dotnet/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/jira/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/revolut/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/salesforce/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/soft1/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/teamcity/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/unleashed/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/xero/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/zendesk/service
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    directory: /integrations/intera/zoho-inventory/service
-    schedule:
-      interval: weekly
+    groups:
+      docker:
+        patterns: ['*']
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: nuget
-    directory: /shared/dotnet/Intera.Common
+    directories:
+      - /shared/dotnet/*
+      - /integrations/intera/*/service
     schedule:
       interval: weekly
+    groups:
+      nuget:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
