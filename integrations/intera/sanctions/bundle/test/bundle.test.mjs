@@ -3,14 +3,16 @@ import { createRequire } from 'node:module';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 const require = createRequire(import.meta.url);
-const bundle = require('../dist/index.js');
-const { downloadText } = require('../dist/lists/download.js');
-const { decodeEntities, parseXml } = require('../dist/lists/xml.js');
+const distBundle = require('../dist/index.js');
 const {
+  bundle,
+  downloadText,
+  decodeEntities,
+  parseXml,
   LIST_MAX_STALE_MS,
   LIST_REFRESH_INTERVAL_MS,
   LIST_RETRY_INTERVAL_MS,
-} = require('../dist/constants.js');
+} = require('./dist/harness.cjs');
 
 const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <export generationDate="2026-08-05T00:00:00Z">
@@ -53,6 +55,8 @@ afterEach(() => {
 
 describe('sanctions bundle contract', () => {
   it('exports manifest, eu_sanctions_list dataSource, getDataSources, and testConnection', () => {
+    assert.deepEqual(distBundle.manifest, bundle.manifest);
+    assert.equal(typeof distBundle.testConnection, 'function');
     assert.equal(bundle.manifest.id, 'intera-sanctions-integration');
     assert.equal(bundle.manifest.name, 'SanctionsCheck');
     assert.equal(bundle.manifest.version, '1.2.1');

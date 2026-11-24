@@ -2,7 +2,7 @@ import type { GitHubApiError, GitHubObject } from '../github/github-client';
 import type { GitHubReader } from '../github/reader';
 import { MULTI_VALUE_SEPARATOR } from '../constants';
 import type { GitHubRecord, IDataSourceFieldDescriptor, IFieldLookupDeclaration } from '../types';
-import type { IQueryShape } from './query-shape';
+import type { IQueryShape } from '@intera-integrations/shared';
 
 /**
  * One datasource: its columns and how to read its rows from GitHub. Filtering, grouping, ordering and paging are the

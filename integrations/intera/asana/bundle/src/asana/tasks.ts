@@ -4,7 +4,7 @@ import {
   MAX_TASKS_BY_ID,
   MAX_TASKS_PER_READ,
 } from '../constants';
-import type { IQueryShape } from '../data-sources/query-shape';
+import type { IQueryShape } from '@intera-integrations/shared';
 import { AsanaApiError, type AsanaObject } from './asana-client';
 import { mapLimited } from './map-limited';
 import type { AsanaReader } from './reader';

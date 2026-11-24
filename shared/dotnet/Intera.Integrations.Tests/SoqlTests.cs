@@ -60,6 +60,28 @@ public sealed class SoqlTests
         Assert.Contains("(Amount >= 1500)", built.Soql, StringComparison.Ordinal);
         Assert.Matches(@"CloseDate >= \d{4}-\d{2}-01\)", built.Soql);
         Assert.EndsWith("ORDER BY Amount DESC LIMIT 25", built.Soql, StringComparison.Ordinal);
+
+        var wholeMonthQuery = new QueryRequest
+        {
+            TimeZone = "UTC",
+            Filter = new FilterCondition
+            {
+                Type = "condition",
+                Field = "close_date",
+                Operator = FilterOperator.Equal,
+                Value = new RelativeDateValue
+                {
+                    Type = "relativeDate",
+                    From = "today",
+                    Unit = "month",
+                    Amount = 0,
+                    SnapTo = "month",
+                    SnapEdge = "whole"
+                }
+            }
+        };
+        var wholeBuilt = new SoqlQueryBuilder(OpportunityQueryFields.Source).Build(wholeMonthQuery, defaultLimit: 2000);
+        Assert.Matches(@"\(CloseDate >= \d{4}-\d{2}-01 AND CloseDate < \d{4}-\d{2}-01\)", wholeBuilt.Soql);
     }
 
     [Fact]

@@ -13,7 +13,7 @@ import type {
   IDataSourceFieldDescriptor,
   IDataSourceParams,
 } from '../types';
-import { normalizeDataQuery } from './query-normalization';
+import { normalizeDataQuery } from '@intera-integrations/shared';
 
 function text(name: string, label: string): IDataSourceFieldDescriptor {
   return { name, type: 'string', label };

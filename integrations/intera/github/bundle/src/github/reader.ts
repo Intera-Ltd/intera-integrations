@@ -1,6 +1,6 @@
 import type { IGitHubConfig } from '../config';
 import { MAX_RECORDS_PER_READ, REFERENCE_CACHE_TTL_MS } from '../constants';
-import type { IQueryShape } from '../data-sources/query-shape';
+import type { IQueryShape } from '@intera-integrations/shared';
 import type { GitHubRecord } from '../types';
 import { GitHubApiError, GitHubClient, type GitHubObject } from './github-client';
 import { mapLimited } from './map-limited';

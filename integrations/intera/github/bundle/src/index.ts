@@ -1,12 +1,12 @@
-declare const module: { exports: unknown };
 import { githubDataSources } from './data-sources/github-data-sources.source';
 import { manifest } from './manifest';
 import { testConnection } from './test-connection';
+import type { IDataSource } from './types';
 
-module.exports = {
-  manifest,
-  dataSources: githubDataSources,
-  getDataSources: () => githubDataSources,
-  // Invoked by Core when an admin presses "Test connection" on an instance.
-  testConnection,
-};
+export const dataSources: IDataSource[] = githubDataSources;
+
+export function getDataSources(): IDataSource[] {
+  return githubDataSources;
+}
+
+export { manifest, testConnection };

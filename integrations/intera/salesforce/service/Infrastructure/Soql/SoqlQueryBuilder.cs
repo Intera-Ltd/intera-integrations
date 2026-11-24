@@ -625,6 +625,28 @@ public sealed class SoqlQueryBuilder(SoqlObject sobject)
             throw new ArgumentException($"Operator '{condition.Operator}' requires 'value'.");
         }
 
+        if (condition.Value is RelativeDateValue relativeDate)
+        {
+            var range = RelativeDateResolver.ResolveRange(relativeDate, queryNow, zone, weekStart);
+            if (range.EndExclusive is { } endExclusive)
+            {
+                var startLiteral = SoqlLiteral.Render(field, range.Start, zone);
+                var endLiteral = SoqlLiteral.Render(field, endExclusive, zone);
+                return condition.Operator switch
+                {
+                    FilterOperator.Equal => $"({field.Path} >= {startLiteral} AND {field.Path} < {endLiteral})",
+                    FilterOperator.NotEqual => $"({field.Path} < {startLiteral} OR {field.Path} >= {endLiteral})",
+                    FilterOperator.LessThan => $"({field.Path} < {startLiteral})",
+                    FilterOperator.LessThanOrEqual => $"({field.Path} < {endLiteral})",
+                    FilterOperator.GreaterThan => $"({field.Path} >= {endLiteral})",
+                    FilterOperator.GreaterThanOrEqual => $"({field.Path} >= {startLiteral})",
+                    _ => throw new ArgumentException($"Unsupported filter operator '{condition.Operator}'.")
+                };
+            }
+
+            return $"({field.Path} {soqlOperator} {SoqlLiteral.Render(field, range.Start, zone)})";
+        }
+
         return $"({field.Path} {soqlOperator} {RenderValue(field, condition.Value)})";
     }
 

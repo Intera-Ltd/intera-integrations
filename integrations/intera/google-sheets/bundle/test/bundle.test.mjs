@@ -9,17 +9,16 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const bundle = require('../dist/index.js');
-const { fetchBoundedText } = require('../dist/google/http.js');
+const distBundle = require('../dist/index.js');
 const {
+  bundle,
+  fetchBoundedText,
   clearTokenCache,
   getTokenCacheSize,
-} = require('../dist/google/token-cache.js');
-const { MAX_TOKEN_CACHE_ENTRIES } = require('../dist/constants.js');
-const {
+  MAX_TOKEN_CACHE_ENTRIES,
   analyzeQuery,
   normalizeFilterNode,
-} = require('../dist/data-sources/query-shape.js');
+} = require('./dist/harness.cjs');
 
 const KEY_PAIR_A = crypto.generateKeyPairSync('rsa', {
   modulusLength: 2048,
@@ -241,6 +240,9 @@ afterEach(() => {
 
 describe('google-sheets bundle contract', () => {
   it('exports manifest, gsheet-rows dataSource, provisionInstance, testConnection, and built icon asset', () => {
+    assert.deepEqual(distBundle.manifest, bundle.manifest);
+    assert.equal(typeof distBundle.provisionInstance, 'function');
+    assert.equal(typeof distBundle.testConnection, 'function');
     assert.equal(bundle.manifest.id, 'intera-gsheets-integration');
     assert.equal(bundle.manifest.name, 'Google Sheets');
     assert.equal(bundle.manifest.version, '1.3.1');

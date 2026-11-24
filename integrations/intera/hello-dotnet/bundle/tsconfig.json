@@ -4,14 +4,16 @@
     "lib": ["ES2022", "DOM"],
     "module": "CommonJS",
     "moduleResolution": "node",
-    "rootDir": "src",
-    "outDir": "dist",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "declaration": false,
-    "sourceMap": false,
-    "skipLibCheck": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@intera-integrations/shared": ["../../../../shared/ts/index.ts"],
+      "@intera-integrations/shared/*": ["../../../../shared/ts/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src/**/*.ts", "../../../../shared/ts/**/*.ts"]
 }

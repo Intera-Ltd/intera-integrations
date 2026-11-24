@@ -1,3 +1,8 @@
+import {
+  awaitWithSignal,
+  buildEvaluationSchema,
+  executeInMemoryQuery,
+} from '@intera-integrations/shared';
 import { resolveConfigUrl } from '../config';
 import {
   EU_FSF_XML_URL,
@@ -12,15 +17,9 @@ import type {
   IDataSource,
   IDataSourceContext,
   IDataSourceFieldDescriptor,
-  IDataSourceParams,
   IDataSourcePage,
+  IDataSourceParams,
 } from '../types';
-import {
-  applyOrder,
-  buildEvaluationSchema,
-  evaluateExpressions,
-  matchesFilter,
-} from './query-evaluator';
 
 /**
  * What distinguishes one list from another. Everything after the download —
@@ -57,36 +56,6 @@ export function loadList(
   return getList(url, list.load);
 }
 
-function awaitWithSignal<T>(
-  work: Promise<T>,
-  signal: AbortSignal | undefined,
-): Promise<T> {
-  if (signal === undefined) {
-    return work;
-  }
-  if (signal.aborted) {
-    work.catch(() => undefined);
-    return Promise.reject(signal.reason ?? new Error('Aborted'));
-  }
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = () => {
-      work.catch(() => undefined);
-      reject(signal.reason ?? new Error('Aborted'));
-    };
-    signal.addEventListener('abort', onAbort, { once: true });
-    work.then(
-      (value) => {
-        signal.removeEventListener('abort', onAbort);
-        resolve(value);
-      },
-      (error: unknown) => {
-        signal.removeEventListener('abort', onAbort);
-        reject(error);
-      },
-    );
-  });
-}
-
 function createListDataSource(list: ISanctionsListDefinition): IDataSource {
   const evaluationSchema = buildEvaluationSchema(list.fields);
 
@@ -104,50 +73,7 @@ function createListDataSource(list: ISanctionsListDefinition): IDataSource {
         loadList(list, context?.config),
         context?.signal,
       );
-
-      // `filter` and `filters` are never both set (Core rejects that
-      // upstream); a chain is an AND across its entries.
-      let filtered = rows;
-      if (params.filter) {
-        filtered = filtered.filter((row) =>
-          matchesFilter(row, params.filter, evaluationSchema),
-        );
-      }
-      if (Array.isArray(params.filters)) {
-        for (const filter of params.filters) {
-          filtered = filtered.filter((row) =>
-            matchesFilter(row, filter, evaluationSchema),
-          );
-        }
-      }
-
-      const shaped =
-        Array.isArray(params.expressions) && params.expressions.length > 0
-          ? evaluateExpressions(
-              filtered,
-              params.expressions,
-              evaluationSchema,
-              params.orderBy,
-              Array.isArray(params.groupBy) ? params.groupBy : undefined,
-            )
-          : applyOrder(filtered, params.orderBy, evaluationSchema);
-
-      // A page (rather than a bare array) tells Core that offset/limit were
-      // applied here and `total` is the whole filtered set.
-      if (typeof params.offset === 'number' && params.offset >= 0) {
-        const limit =
-          typeof params.limit === 'number' && params.limit > 0
-            ? params.limit
-            : undefined;
-        const start = params.offset;
-        const end = limit === undefined ? undefined : start + limit;
-        return { rows: shaped.slice(start, end), total: shaped.length };
-      }
-
-      if (typeof params.limit === 'number' && params.limit > 0) {
-        return shaped.slice(0, params.limit);
-      }
-      return shaped;
+      return executeInMemoryQuery(rows, params, evaluationSchema);
     },
   };
 }
