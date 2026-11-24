@@ -10,7 +10,7 @@
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^20",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5"
   }
 }
