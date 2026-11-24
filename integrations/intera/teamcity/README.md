@@ -1,6 +1,6 @@
 # JetBrains TeamCity
 
-Connects INTERA to JetBrains TeamCity via personal access token authentication (`Authorization: Bearer`) in a stateless companion .NET 10 service to monitor build configurations, running/queued builds, and latest test results.
+Connects INTERA to JetBrains TeamCity via personal access token authentication (`Authorization: Bearer`) in a stateless companion .NET 11 service to monitor build configurations, running/queued builds, and latest test results.
 
 | | |
 | --- | --- |

@@ -1,6 +1,6 @@
 # Salesforce
 
-Connects INTERA to Salesforce CRM via an OAuth 2.0 client-credentials Connected App / External Client App, compiling filters, ordering, and paging into SOQL in a stateless companion .NET 10 service.
+Connects INTERA to Salesforce CRM via an OAuth 2.0 client-credentials Connected App / External Client App, compiling filters, ordering, and paging into SOQL in a stateless companion .NET 11 service.
 
 | | |
 | --- | --- |

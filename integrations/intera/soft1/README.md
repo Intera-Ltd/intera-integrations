@@ -1,6 +1,6 @@
 # EntersoftOne Soft1
 
-Connects INTERA to EntersoftOne Soft1 ERP via the `s1services` Web Service Connector API in a stateless companion .NET 10 service (with automatic UTF-8 / `windows-1253` Greek encoding detection and session renewal).
+Connects INTERA to EntersoftOne Soft1 ERP via the `s1services` Web Service Connector API in a stateless companion .NET 11 service (with automatic UTF-8 / `windows-1253` Greek encoding detection and session renewal).
 
 | | |
 | --- | --- |

@@ -1,6 +1,6 @@
 # Jira
 
-Connects INTERA to Jira Cloud via Atlassian OAuth 2.0 (3LO, relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint) with AES-256-GCM encrypted persistent token storage, rotating refresh-token keep-alive, JQL pushdown, and custom-field discovery through a companion .NET 10 service.
+Connects INTERA to Jira Cloud via Atlassian OAuth 2.0 (3LO, relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint) with AES-256-GCM encrypted persistent token storage, rotating refresh-token keep-alive, JQL pushdown, and custom-field discovery through a companion .NET 11 service.
 
 | | |
 | --- | --- |

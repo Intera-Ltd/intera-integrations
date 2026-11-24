@@ -1,6 +1,6 @@
 # Eurobank
 
-Connects INTERA to Eurobank Cyprus B2B / Open Banking v2 via OAuth 2.0 Authorization Code flow with optional mTLS client certificates (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint, with AES-256-GCM encrypted token persistence under `/app/App_Data`), exposing bank accounts and balances through a companion .NET 10 service.
+Connects INTERA to Eurobank Cyprus B2B / Open Banking v2 via OAuth 2.0 Authorization Code flow with optional mTLS client certificates (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint, with AES-256-GCM encrypted token persistence under `/app/App_Data`), exposing bank accounts and balances through a companion .NET 11 service.
 
 | | |
 | --- | --- |

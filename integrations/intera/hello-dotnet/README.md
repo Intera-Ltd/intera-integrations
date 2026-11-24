@@ -20,7 +20,7 @@ language, with a thin TypeScript bundle in front of it.
 INTERA Core ──loads──> bundle (dist/index.js)
                            │  GET {intera_service_url}/api/items
                            ▼
-                     hello-dotnet container (.NET 8, port 8080)
+                     hello-dotnet container (.NET 11, port 8080)
 ```
 
 1. An administrator installs the integration from **Settings → Marketplace**.
@@ -48,7 +48,7 @@ bundle/
   src/index.ts         CommonJS entry point
   test/bundle.test.mjs unit tests with a mocked fetch
 service/
-  Program.cs           .NET 8 minimal API: /health, /api/items
+  Program.cs           .NET 11 minimal API: /health, /api/items
   Dockerfile           multi-stage (sdk -> aspnet), non-root, port 8080
 ```
 

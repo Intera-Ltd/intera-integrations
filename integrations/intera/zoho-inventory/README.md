@@ -1,6 +1,6 @@
 # Zoho Inventory
 
-Connects INTERA to a Zoho Inventory organization via a Zoho Self Client refresh token, exposing customers, vendors, items, stock by item/location, sales orders, purchase orders, receipts, packages, shipments, invoices, and bills (with dynamic custom-field provisioning) through a stateless companion .NET 10 service.
+Connects INTERA to a Zoho Inventory organization via a Zoho Self Client refresh token, exposing customers, vendors, items, stock by item/location, sales orders, purchase orders, receipts, packages, shipments, invoices, and bills (with dynamic custom-field provisioning) through a stateless companion .NET 11 service.
 
 | | |
 | --- | --- |

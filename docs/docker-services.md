@@ -129,5 +129,5 @@ installation can pull it without extra setup.
 ## Example
 
 [`integrations/intera/hello-dotnet`](../integrations/intera/hello-dotnet/):
-.NET 8 minimal API, multi-stage `Dockerfile` (`sdk` → `aspnet`), non-root
+.NET 11 minimal API, multi-stage `Dockerfile` (`sdk` → `aspnet`), non-root
 `app` user, port 8080, `GET /health`.

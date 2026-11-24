@@ -16,7 +16,7 @@ a container with your own code.
 | Heavier logic, another language, a long-lived process, local state | [`templates/bundle-with-service`](../templates/bundle-with-service/) |
 
 [`integrations/intera/hello-dotnet`](../integrations/intera/hello-dotnet/) is a
-complete example of the second shape with a .NET 8 service.
+complete example of the second shape with a .NET 11 service.
 
 ## 2. Choose your ids
 

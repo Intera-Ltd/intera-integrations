@@ -1,6 +1,6 @@
 # Revolut Business
 
-Connects INTERA to Revolut Business via OAuth 2.0 with RSA JWT client assertions (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint, with AES-256-GCM encrypted token persistence under `/app/App_Data`), exposing accounts, balances, exchange rates, and leg-grain transactions through a companion .NET 10 service.
+Connects INTERA to Revolut Business via OAuth 2.0 with RSA JWT client assertions (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint, with AES-256-GCM encrypted token persistence under `/app/App_Data`), exposing accounts, balances, exchange rates, and leg-grain transactions through a companion .NET 11 service.
 
 | | |
 | --- | --- |

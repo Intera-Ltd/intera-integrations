@@ -1,6 +1,6 @@
 # Xero
 
-Connects INTERA to Xero Accounting via OAuth 2.0 (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint, with AES-256-GCM encrypted persistent token storage and automatic rotating refresh-token keep-alive), exposing organisations, chart of accounts, contacts, invoices, bills, credit notes, payments, bank transactions, manual journals, budgets, and monthly/aged financial reports through a companion .NET 10 service.
+Connects INTERA to Xero Accounting via OAuth 2.0 (relayed automatically through INTERA Core's public `oauth-callback` webhook endpoint, with AES-256-GCM encrypted persistent token storage and automatic rotating refresh-token keep-alive), exposing organisations, chart of accounts, contacts, invoices, bills, credit notes, payments, bank transactions, manual journals, budgets, and monthly/aged financial reports through a companion .NET 11 service.
 
 | | |
 | --- | --- |
