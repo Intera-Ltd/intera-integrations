@@ -8,7 +8,7 @@ RUN dotnet restore -a "$TARGETARCH"
 COPY . ./
 RUN dotnet publish -c Release -a "$TARGETARCH" --no-restore -o /app
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:aac50ceef10391e78a899e3d2ccd00bbafa2dcb56ccf4586cbccf00edb84fc21 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0@sha256:ca396ece3f2a2e62c7a03f1d7d710b8bc7e8c9dea5597d091178d9f5bfca13f0 AS runtime
 WORKDIR /app
 COPY --from=build /app ./
 RUN mkdir -p /app/App_Data && chown -R "$APP_UID" /app/App_Data
